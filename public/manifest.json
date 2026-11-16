@@ -1,0 +1,9 @@
+{
+  "name": "GPLX 600 Câu — Chuẩn Cục CSGT 2025",
+  "short_name": "GPLX 600",
+  "description": "Ứng dụng luyện thi lý thuyết lái xe 600 câu chuẩn Cục CSGT 2025",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0D9488"
+}
