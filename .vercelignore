@@ -1,0 +1,4 @@
+*.pdf
+extract_questions.py
+questions.json
+*.tsbuildinfo

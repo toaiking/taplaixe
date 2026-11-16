@@ -4,5 +4,6 @@ dist/
 .env.*
 __pycache__/
 *.pyc
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
