@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ScreenId } from '../types/question';
+import { InstallAppButton } from './InstallAppButton';
 
 const NAV_ITEMS: { id: ScreenId; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard', label: 'Trang chủ', icon: <Home className="h-5 w-5" /> },
@@ -74,6 +75,7 @@ export const Navbar: React.FC = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <InstallAppButton />
             <button
               onClick={toggleKeywordMode}
               title="Bật/tắt tô sáng từ khóa quyết định"
