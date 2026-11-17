@@ -925,13 +925,18 @@ export const SIM_SITUATIONS: SimSituation[] = [
     "parts": {
       "part1": [
         {
-          "label": "B",
-          "text": "Đường cong ban ngày",
+          "label": "A",
+          "text": "A)",
           "isCorrect": true
         },
         {
+          "label": "B",
+          "text": "Xe phía trước đi bình thường",
+          "isCorrect": false
+        },
+        {
           "label": "C",
-          "text": "Đường ổ gà",
+          "text": "Đường thông thoáng không có chướng ngại vật",
           "isCorrect": false
         }
       ],
@@ -1078,14 +1083,19 @@ export const SIM_SITUATIONS: SimSituation[] = [
     "parts": {
       "part1": [
         {
+          "label": "A",
+          "text": "Xe phía trước quay đầu sai",
+          "isCorrect": true
+        },
+        {
           "label": "B",
-          "text": "Xe phía trước băng qua đường",
+          "text": "Xe phía trước đi bình thường",
           "isCorrect": false
         },
         {
           "label": "C",
-          "text": "Xe phía trước quay đầu sai",
-          "isCorrect": true
+          "text": "Đường thông thoáng không có chướng ngại vật",
+          "isCorrect": false
         }
       ],
       "part2": [
@@ -1779,7 +1789,7 @@ export const SIM_SITUATIONS: SimSituation[] = [
     "name": "Xe buýt vượt sai",
     "indirect": "Xe buýt phía sau xe con tăng tốc bất thường",
     "direct": "Giảm tốc độ đi sát làn bên phải",
-    "action": null,
+    "action": "Quan sát cả hai phía, giảm tốc đề phòng cửa mở hoặc người băng qua",
     "videoUrl": "https://mo-phong-giao-thong.github.io/videos/Chuong_1_giao_thong_trong_do_thi/19.mp4",
     "parts": {
       "part1": [
@@ -1836,17 +1846,17 @@ export const SIM_SITUATIONS: SimSituation[] = [
       "part4": [
         {
           "label": "A",
-          "text": "Giảm tốc, giữ khoảng cách an toàn và đi đúng hướng dẫn",
-          "isCorrect": false
+          "text": "Quan sát cả hai phía, giảm tốc đề phòng cửa mở hoặc người băng qua",
+          "isCorrect": true
         },
         {
           "label": "B",
-          "text": "Giảm tốc độ đi sát làn bên phải",
+          "text": "Tăng tốc độ vượt nhanh qua chướng ngại vật",
           "isCorrect": false
         },
         {
           "label": "C",
-          "text": "Tăng tốc, nhanh chống vượt qua",
+          "text": "Giữ nguyên tốc độ và bấm còi liên tục",
           "isCorrect": false
         }
       ]
