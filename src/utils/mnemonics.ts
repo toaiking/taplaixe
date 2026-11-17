@@ -50,7 +50,7 @@ export function getQuestionExplanation(q: Question): {
 } {
   if (q.explanation && q.explanation.trim()) {
     return {
-      quickTip: 'Ghi nhớ quy tắc chuẩn của Cục CSGT 2025.',
+      quickTip: 'Ghi nhớ quy tắc chuẩn của Cục CSGT 2026.',
       legalBasis: q.explanation,
     };
   }
@@ -115,7 +115,7 @@ export function getQuestionExplanation(q: Question): {
   if (text.includes('tuổi') || text.includes('giấy phép lái xe hạng')) {
     return {
       quickTip: '18 tuổi (A1, A, B1, B, C1) • 21 tuổi (C) • 24 tuổi (D1, D2) • 27 tuổi (D).',
-      legalBasis: `Theo phân hạng GPLX mới 2025: "${shortText(ans)}".`,
+      legalBasis: `Theo phân hạng GPLX mới 2026: "${shortText(ans)}".`,
     };
   }
 

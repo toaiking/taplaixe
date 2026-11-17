@@ -341,7 +341,7 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
 
             <div className="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Quy định Nồng độ cồn &amp; Điểm GPLX 2025
+                Quy định Nồng độ cồn &amp; Điểm GPLX 2026
               </h3>
               <ul className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
                 <li>• Nồng độ cồn trong máu/hơi thở khi lái xe: <strong>Tuyệt đối = 0</strong> (Bị nghiêm cấm).</li>

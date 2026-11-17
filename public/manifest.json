@@ -2,7 +2,7 @@
   "id": "/",
   "name": "GPLX 600",
   "short_name": "GPLX 600",
-  "description": "Ứng dụng luyện thi lý thuyết lái xe 600 câu với SRS lặp lại ngắt quãng, từ khóa ghi nhớ và phòng thi sát hạch.",
+  "description": "Ứng dụng ôn thi lý thuyết 600 câu & 120 tình huống mô phỏng giao thông chuẩn 2026 (Thông tư 108/2026/TT-BCA & Thông tư 17/2026/TT-BXD).",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
