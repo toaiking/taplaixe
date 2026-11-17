@@ -6,7 +6,10 @@ import {
   Shuffle,
   XCircle,
 } from 'lucide-react';
-import { EXAM_CONFIGS } from '../data/chapters';
+import {
+  EXAM_CONFIGS_108_2026,
+  EXAM_CONFIGS_TRANSITIONAL,
+} from '../data/chapters';
 import { useAppStore } from '../store/useAppStore';
 import { ExamConfig, ExamResult, Question } from '../types/question';
 import { QuizWorkspace } from './QuizWorkspace';
@@ -46,9 +49,10 @@ function generateExamQuestions(
   const rng = seed !== undefined ? mulberry32(seed) : Math.random;
   const chosenIds = new Set<number>();
   const picked: Question[] = [];
+  const isAllowedChapter = (chap: number) => (config.chapterWeights[chap] ?? 0) > 0;
 
   const criticalPool = shuffleWithRng(
-    allQuestions.filter((q) => q.isCritical),
+    allQuestions.filter((q) => q.isCritical && isAllowedChapter(q.chapter)),
     rng
   );
   for (let i = 0; i < Math.min(config.criticalCount, criticalPool.length); i++) {
@@ -78,7 +82,7 @@ function generateExamQuestions(
 
   if (picked.length < config.totalQuestions) {
     const rest = shuffleWithRng(
-      allQuestions.filter((q) => !chosenIds.has(q.id)),
+      allQuestions.filter((q) => !chosenIds.has(q.id) && isAllowedChapter(q.chapter)),
       rng
     );
     for (const q of rest) {
@@ -99,6 +103,7 @@ function formatTime(sec: number): string {
 export const ExamHubView: React.FC<ExamHubViewProps> = ({ questions }) => {
   const { examHistory, srs } = useAppStore();
   const [lobbyTab, setLobbyTab] = useState<LobbyTab>('fixed');
+  const [examStandard, setExamStandard] = useState<'tt108' | 'transitional'>('tt108');
   const [selectedClassId, setSelectedClassId] = useState<string>('B');
   const [activeExam, setActiveExam] = useState<{
     runId: number;
@@ -112,9 +117,15 @@ export const ExamHubView: React.FC<ExamHubViewProps> = ({ questions }) => {
     };
   } | null>(null);
 
+  const activeConfigs =
+    examStandard === 'tt108' ? EXAM_CONFIGS_108_2026 : EXAM_CONFIGS_TRANSITIONAL;
+
   const selectedLicenseConfig = useMemo(
-    () => EXAM_CONFIGS.find((c) => c.id === selectedClassId) ?? EXAM_CONFIGS[1],
-    [selectedClassId]
+    () =>
+      activeConfigs.find((c) => c.id === selectedClassId || c.name === selectedClassId) ??
+      activeConfigs.find((c) => c.name === 'Hạng B') ??
+      activeConfigs[0],
+    [activeConfigs, selectedClassId]
   );
 
   const bestByExamKey = useMemo(() => {
@@ -264,10 +275,10 @@ export const ExamHubView: React.FC<ExamHubViewProps> = ({ questions }) => {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Phòng Thi Sát Hạch 2025
+            Phòng Thi Sát Hạch 2026
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Cấu trúc chuẩn Cục CSGT • Đạt điểm tối thiểu và không sai câu điểm liệt.
+            Theo Thông tư 108/2026/TT-BCA của Bộ Công an • Đạt tối thiểu 90% và không sai câu điểm liệt.
           </p>
         </div>
 
@@ -282,14 +293,44 @@ export const ExamHubView: React.FC<ExamHubViewProps> = ({ questions }) => {
         />
       </div>
 
+      {/* Standard Switcher: TT 108/2026/TT-BCA vs Transitional TT 12/2025 */}
+      {(lobbyTab === 'fixed' || lobbyTab === 'random') && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="text-xs text-slate-600 dark:text-slate-300">
+            <strong className="font-semibold text-slate-900 dark:text-slate-100">
+              Quy chuẩn đề thi (Điều 41 TT 108/2026/TT-BCA):
+            </strong>{' '}
+            {examStandard === 'tt108'
+              ? 'Phụ lục I, II, III TT 108/2026 (40–80 câu, đạt ≥ 90%, áp dụng từ 01/03/2027)'
+              : 'Giai đoạn chuyển tiếp TT 12/2025 (25–45 câu, áp dụng đến hết 28/02/2027)'}
+          </div>
+          <SegmentedControl
+            value={examStandard}
+            onChange={(val) => {
+              setExamStandard(val);
+              const nextList =
+                val === 'tt108' ? EXAM_CONFIGS_108_2026 : EXAM_CONFIGS_TRANSITIONAL;
+              const matchByName = nextList.find(
+                (c) => c.name === selectedLicenseConfig.name
+              );
+              setSelectedClassId(matchByName ? matchByName.id : nextList[0].id);
+            }}
+            options={[
+              { id: 'tt108', label: 'TT 108/2026 (40–80 câu)' },
+              { id: 'transitional', label: 'Đến 28/02/2027 (25–45 câu)' },
+            ]}
+          />
+        </div>
+      )}
+
       {/* TAB 1: Bộ 20 Đề Chuẩn */}
       {lobbyTab === 'fixed' && (
         <div className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SegmentedControl
-              value={selectedClassId}
+              value={selectedLicenseConfig.id}
               onChange={setSelectedClassId}
-              options={EXAM_CONFIGS.map((c) => ({ id: c.id, label: c.name }))}
+              options={activeConfigs.map((c) => ({ id: c.id, label: c.name }))}
             />
             <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
               {selectedLicenseConfig.totalQuestions} câu •{' '}
@@ -352,7 +393,7 @@ export const ExamHubView: React.FC<ExamHubViewProps> = ({ questions }) => {
       {/* TAB 2: Đề Ngẫu Nhiên */}
       {lobbyTab === 'random' && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {EXAM_CONFIGS.map((cfg) => (
+          {activeConfigs.map((cfg) => (
             <div
               key={cfg.id}
               className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"

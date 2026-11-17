@@ -556,42 +556,108 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
             </div>
           </div>
 
-          {/* 2026 Regulation Updates Banner */}
+          {/* Thông tư 108/2026/TT-BCA Official Exam Structure & Licensing Rules */}
           <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-6 dark:border-indigo-900/60 dark:bg-indigo-950/30">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-block rounded-md bg-indigo-600 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white">
-                Cập nhật mới 2026
+                Thông tư 108/2026/TT-BCA
               </span>
               <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                Thông tư 12/2025/TT-BCA • Nghị định 168/2024 &amp; 238/2026
+                Ban hành 29/06/2026 • Hiệu lực 01/07/2026 (Thay thế TT 12/2025/TT-BCA)
               </span>
             </div>
             <h3 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
-              Điểm mới kỳ thi sát hạch &amp; Luật Giao thông áp dụng 2026
+              Quy định Sát hạch &amp; Cấp GPLX theo Thông tư 108/2026/TT-BCA của Bộ Công an
             </h3>
-            <ul className="mt-3 grid gap-2.5 text-xs leading-relaxed text-slate-700 sm:grid-cols-2 sm:text-sm dark:text-slate-300">
+
+            <div className="mt-4 overflow-x-auto rounded-xl border border-indigo-200/70 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+                    <th className="p-3 font-bold">Hạng GPLX</th>
+                    <th className="p-3 font-bold">Đề chuẩn TT 108/2026 (từ 01/03/2027)</th>
+                    <th className="p-3 font-bold">Điểm đạt</th>
+                    <th className="p-3 font-bold">Giai đoạn chuyển tiếp (đến 28/02/2027)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng A1, A</td>
+                    <td className="p-3 font-mono">40 câu / 27 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 36 / 40</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">
+                      25 câu / 19p (A1 đạt 21/25 • A đạt 23/25). <em>Thi giấy DTTS A1: 30 câu / 60p, đạt 27/30.</em>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng B1</td>
+                    <td className="p-3 font-mono">50 câu / 33 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 45 / 50</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">25 câu / 19 phút • Đạt ≥ 23/25</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng B (Tự động, sàn, điện)</td>
+                    <td className="p-3 font-mono">50 câu / 33 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 45 / 50</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">30 câu / 20 phút • Đạt ≥ 27/30</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng C1</td>
+                    <td className="p-3 font-mono">60 câu / 40 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 54 / 60</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">35 câu / 22 phút • Đạt ≥ 32/35</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng C</td>
+                    <td className="p-3 font-mono">70 câu / 47 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 63 / 70</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">40 câu / 24 phút • Đạt ≥ 36/40</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng D1, D2, D &amp; E</td>
+                    <td className="p-3 font-mono">80 câu / 53 phút</td>
+                    <td className="p-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">≥ 72 / 80</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">45 câu / 26 phút • Đạt ≥ 41/45</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ul className="mt-4 grid gap-2.5 text-xs leading-relaxed text-slate-700 sm:grid-cols-2 sm:text-sm dark:text-slate-300">
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
                 <span>
-                  <strong>Điểm đạt hạng A1 vs A tách riêng:</strong> Hạng A1 đạt từ <strong>21/25</strong> câu; Hạng A &amp; B1 đạt từ <strong>23/25</strong> câu; Hạng B đạt <strong>27/30</strong>; C1 đạt <strong>32/35</strong>; C đạt <strong>36/40</strong>; D đạt <strong>41/45</strong> (đều có 1 câu điểm liệt).
+                  <strong>Trình tự sát hạch ô tô (Điều 4 &amp; Phụ lục III):</strong> Chỉ gồm <strong>3 phần</strong>: Lý thuyết → Thực hành trong hình (11 bài hạng B; 10 bài hạng C1, C, D; đạt ≥ 80/100) → Thực hành trên đường (<strong>tối thiểu 05 km với 12 bài</strong>, đạt ≥ 80/100). <strong>Không thi mô phỏng máy tính khi sát hạch.</strong>
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
                 <span>
-                  <strong>Miễn thi &amp; bảo lưu kết quả:</strong> Có GPLX ô tô còn hiệu lực được <strong>miễn lý thuyết hạng A1/A</strong>. Đạt lý thuyết được bảo lưu <strong>01 năm</strong>; trượt lý thuyết dừng thi thực hành ngay.
+                  <strong>Sát hạch mô tô A1, A (Điều 4, Điều 41 &amp; Phụ lục I):</strong> Có GPLX ô tô còn hiệu lực được <strong>miễn lý thuyết</strong>. Thi thực hành gồm Bài số 1 (hình số 8, ≤ 3 phút) và <strong>Bài số 2</strong> (11 tình huống đi 2 vòng trong 5 phút, áp dụng từ <strong>01/01/2028</strong>).
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
                 <span>
-                  <strong>Trừ điểm GPLX (12 điểm/năm):</strong> Nếu bị trừ hết 12 điểm phải chờ tối thiểu 6 tháng và thi kiểm tra lại kiến thức pháp luật để phục hồi điểm.
+                  <strong>Cấp GPLX điện tử trong 02 giờ (Điều 12, 19, 21):</strong> Tích hợp <strong>GPLX điện tử trong 02 giờ</strong> sau khi kết thúc kỳ sát hạch; in thẻ PET trong <strong>3,5 ngày làm việc</strong>. Đổi GPLX: điện tử <strong>01 ngày</strong>, thẻ PET <strong>2,5 ngày</strong> (tiếp nhận tại cả <strong>Công an cấp xã</strong>).
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
                 <span>
-                  <strong>Ghế trẻ em (&lt; 10 tuổi &amp; &lt; 1,35m):</strong> Không ngồi cùng hàng ghế lái (trừ xe 1 hàng ghế) và dùng thiết bị an toàn. Theo NĐ 238/2026, xe cá nhân bước đầu phạt cảnh cáo, không trừ điểm.
+                  <strong>Bảo lưu 01 năm &amp; GPLX ô tô quá hạn (Điều 12 &amp; Điều 19):</strong> Đạt lý thuyết được bảo lưu <strong>01 năm</strong> (kèm kết quả sa hình theo thời hạn lý thuyết). GPLX ô tô quá hạn <strong>từ đủ 30 ngày đến dưới 01 năm</strong> thi lại lý thuyết; <strong>từ đủ 01 năm trở lên</strong> thi lại cả lý thuyết + trong hình + trên đường.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Độ tuổi tối đa hạng D &amp; Thu hồi GPLX (Điều 18 &amp; 25):</strong> Tuổi tối đa hạng D là <strong>đủ 57 tuổi (nam)</strong> và <strong>đủ 55 tuổi (nữ)</strong>. Thu hồi GPLX do gian dối bị cấm cấp lại trong <strong>05 năm</strong> và phải học, sát hạch lại từ đầu.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Trừ điểm GPLX (12 điểm/năm) &amp; Ghế trẻ em (&lt; 10 tuổi, &lt; 1,35m):</strong> Trừ hết 12 điểm phải chờ tối thiểu 6 tháng để kiểm tra phục hồi. Trẻ &lt; 10 tuổi và &lt; 1,35m không ngồi hàng ghế lái và phải dùng thiết bị an toàn.
                 </span>
               </li>
             </ul>
