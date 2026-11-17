@@ -30,7 +30,6 @@ interface AppState {
   activeScreen: ScreenId;
   practicePreset: PracticePreset;
   srs: Record<number, QuestionProgress>;
-  bookmarks: number[];
   pinnedQuestions: number[];
   lastPracticeMap: Record<string, number>;
   examHistory: ExamResult[];
@@ -47,7 +46,6 @@ interface AppState {
   navigateToPractice: (preset: PracticePreset) => void;
   recordAnswer: (questionId: number, isCorrect: boolean) => void;
   setSRSBox: (questionId: number, box: SRSBox) => void;
-  toggleBookmark: (questionId: number) => void;
   togglePinQuestion: (questionId: number) => void;
   setLastPracticeQuestion: (key: string, questionId: number) => void;
   updateStudySchedule: (patch: Partial<StudySchedule>) => void;
@@ -80,7 +78,6 @@ export const useAppStore = create<AppState>()(
       activeScreen: 'dashboard',
       practicePreset: DEFAULT_PRESET,
       srs: {},
-      bookmarks: [],
       pinnedQuestions: [],
       lastPracticeMap: {},
       examHistory: [],
@@ -168,16 +165,6 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
-      toggleBookmark: (questionId) =>
-        set((state) => {
-          const exists = state.bookmarks.includes(questionId);
-          return {
-            bookmarks: exists
-              ? state.bookmarks.filter((id) => id !== questionId)
-              : [...state.bookmarks, questionId],
-          };
-        }),
-
       togglePinQuestion: (questionId) =>
         set((state) => {
           const exists = state.pinnedQuestions.includes(questionId);
@@ -209,7 +196,6 @@ export const useAppStore = create<AppState>()(
       resetProgress: () =>
         set({
           srs: {},
-          bookmarks: [],
           pinnedQuestions: [],
           lastPracticeMap: {},
           examHistory: [],
@@ -224,7 +210,6 @@ export const useAppStore = create<AppState>()(
         keywordMode: state.keywordMode,
         autoAdvance: state.autoAdvance,
         srs: state.srs,
-        bookmarks: state.bookmarks,
         pinnedQuestions: state.pinnedQuestions,
         lastPracticeMap: state.lastPracticeMap,
         examHistory: state.examHistory,

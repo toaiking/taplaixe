@@ -7,7 +7,6 @@ interface QuestionMatrixProps {
   questions: Question[];
   currentIndex: number;
   answers: Record<number, number>;
-  bookmarks: number[];
   pinnedQuestions?: number[];
   isExamMode: boolean;
   touchMode?: boolean;
@@ -18,7 +17,6 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
   questions,
   currentIndex,
   answers,
-  bookmarks,
   pinnedQuestions = [],
   isExamMode,
   touchMode = false,
@@ -79,7 +77,6 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
           const isCurrent = idx === currentIndex;
           const userAns = answers[q.id];
           const isDone = userAns !== undefined;
-          const isBookmarked = bookmarks.includes(q.id);
 
           let cellCls =
             'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
@@ -118,12 +115,10 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
                   className="absolute top-1 left-1 h-1.5 w-1.5 rounded-full bg-red-500"
                 />
               )}
-              {(isBookmarked || pinnedQuestions.includes(q.id)) && (
+              {pinnedQuestions.includes(q.id) && (
                 <span
-                  title={pinnedQuestions.includes(q.id) ? 'Đã ghim' : 'Đã đánh dấu'}
-                  className={`absolute top-1 right-1 h-1.5 w-1.5 rounded-full ${
-                    pinnedQuestions.includes(q.id) ? 'bg-indigo-500' : 'bg-amber-400'
-                  }`}
+                  title="Đã ghim"
+                  className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-indigo-500"
                 />
               )}
             </button>

@@ -26,7 +26,6 @@ export type PracticeSourceMode =
   | 'critical'
   | 'srs'
   | 'wrong'
-  | 'bookmarked'
   | 'pinned'
   | 'speed_distance'
   | 'taplo'

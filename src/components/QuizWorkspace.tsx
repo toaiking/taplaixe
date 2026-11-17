@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertOctagon,
-  Bookmark,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +10,7 @@ import {
   Flame,
   LayoutGrid,
   Lightbulb,
+  Pin,
   Send,
   Shuffle,
   Sparkles,
@@ -60,7 +60,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   const {
     practicePreset,
     srs,
-    bookmarks,
     pinnedQuestions,
     lastPracticeMap,
     keywordMode,
@@ -68,7 +67,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     toggleKeywordMode,
     toggleAutoAdvance,
     recordAnswer,
-    toggleBookmark,
     togglePinQuestion,
     setLastPracticeQuestion,
     saveExamResult,
@@ -132,7 +130,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
 
       if (sourceFilter === 'critical' && !q.isCritical) return false;
       if (sourceFilter === 'wrong' && box !== 'wrong') return false;
-      if (sourceFilter === 'bookmarked' && !bookmarks.includes(q.id)) return false;
       if (sourceFilter === 'pinned' && !pinnedQuestions.includes(q.id)) return false;
       if (sourceFilter === 'speed_distance') {
         const lower = q.question.toLowerCase();
@@ -184,7 +181,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     sourceFilter,
     practicePreset,
     srs,
-    bookmarks,
     pinnedQuestions,
     shuffleSeed,
   ]);
@@ -399,11 +395,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           e.preventDefault();
           setLightboxSrc(currentQ.image);
         }
-      } else if (e.key.toLowerCase() === 'b' || e.key === ' ') {
-        if (currentQ) {
-          e.preventDefault();
-          toggleBookmark(currentQ.id);
-        }
       } else if (e.key.toLowerCase() === 'p') {
         if (currentQ) {
           e.preventDefault();
@@ -602,7 +593,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   const chosen = currentQ ? answers[currentQ.id] : undefined;
   const showFeedback = studyMode === 'learn' && chosen !== undefined;
   const explanation = currentQ ? getQuestionExplanation(currentQ) : null;
-  const isBookmarked = currentQ ? bookmarks.includes(currentQ.id) : false;
+  const isPinned = currentQ ? pinnedQuestions.includes(currentQ.id) : false;
   const eliminatedList = currentQ ? eliminated[currentQ.id] ?? [] : [];
   const progressPct = activeQuestions.length
     ? Math.round(((safeIndex + 1) / activeQuestions.length) * 100)
@@ -825,13 +816,8 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               <div className="lg:col-span-7 lg:max-h-[calc(100vh-10.5rem)] lg:overflow-y-auto">
                 <QuestionCard
                   question={currentQ}
-                  isBookmarked={isBookmarked}
-                  isPinned={pinnedQuestions.includes(currentQ.id)}
+                  isPinned={isPinned}
                   keywordMode={keywordMode}
-                  onToggleBookmark={() => {
-                    hapticTap();
-                    toggleBookmark(currentQ.id);
-                  }}
                   onTogglePin={() => {
                     hapticTap();
                     togglePinQuestion(currentQ.id);
@@ -1003,7 +989,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           </motion.div>
 
           <p className="mt-3 hidden text-center text-[11px] text-slate-400 lg:block">
-            1-4 Chọn • ←/→ Chuyển • H Từ khóa • Z Phóng to • P Ghim • B Lưu • G Bảng câu hỏi
+            1-4 Chọn • ←/→ Chuyển • H Từ khóa • Z Phóng to • P Ghim • G Bảng câu hỏi
           </p>
         </>
       )}
@@ -1052,16 +1038,16 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               type="button"
               onClick={() => {
                 hapticTap();
-                toggleBookmark(currentQ.id);
+                togglePinQuestion(currentQ.id);
               }}
-              aria-label="Đánh dấu"
+              aria-label="Ghim câu hỏi"
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-75 active:scale-[0.95] ${
-                isBookmarked
-                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400'
+                isPinned
+                  ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
               }`}
             >
-              <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-amber-500' : ''}`} />
+              <Pin className={`h-5 w-5 ${isPinned ? 'fill-indigo-600 dark:fill-indigo-400' : ''}`} />
             </button>
 
             <button
@@ -1131,7 +1117,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                   questions={activeQuestions}
                   currentIndex={safeIndex}
                   answers={answers}
-                  bookmarks={bookmarks}
                   pinnedQuestions={pinnedQuestions}
                   isExamMode={studyMode === 'test'}
                   onSelectIndex={(idx) => {
@@ -1156,7 +1141,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           questions={activeQuestions}
           currentIndex={safeIndex}
           answers={answers}
-          bookmarks={bookmarks}
           pinnedQuestions={pinnedQuestions}
           isExamMode={studyMode === 'test'}
           touchMode={true}
