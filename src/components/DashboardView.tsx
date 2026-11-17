@@ -95,7 +95,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
                 </span>
               </div>
               <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                Hạng B • Chuẩn 2025
+                Chuẩn Cục CSGT 2026
               </span>
             </div>
 
@@ -273,7 +273,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            6 Chương Lý Thuyết Chuẩn 2025
+            6 Chương Lý Thuyết Chuẩn 2026
           </h2>
           {!confirmReset ? (
             <button

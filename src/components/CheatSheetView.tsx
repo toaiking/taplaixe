@@ -450,7 +450,7 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
                 <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
                   <th className="p-4 font-bold">Hạng</th>
                   <th className="p-4 font-bold">Tuổi tối thiểu</th>
-                  <th className="p-4 font-bold">Phạm vi điều khiển (Luật 2025)</th>
+                  <th className="p-4 font-bold">Phạm vi điều khiển (Áp dụng 2026)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -465,6 +465,47 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* 2026 Regulation Updates Banner */}
+          <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-6 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-block rounded-md bg-indigo-600 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white">
+                Cập nhật mới 2026
+              </span>
+              <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                Thông tư 12/2025/TT-BCA • Nghị định 168/2024 &amp; 238/2026
+              </span>
+            </div>
+            <h3 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
+              Điểm mới kỳ thi sát hạch &amp; Luật Giao thông áp dụng 2026
+            </h3>
+            <ul className="mt-3 grid gap-2.5 text-xs leading-relaxed text-slate-700 sm:grid-cols-2 sm:text-sm dark:text-slate-300">
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Điểm đạt hạng A1 vs A tách riêng:</strong> Hạng A1 đạt từ <strong>21/25</strong> câu; Hạng A &amp; B1 đạt từ <strong>23/25</strong> câu; Hạng B đạt <strong>27/30</strong>; C1 đạt <strong>32/35</strong>; C đạt <strong>36/40</strong>; D đạt <strong>41/45</strong> (đều có 1 câu điểm liệt).
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Miễn thi &amp; bảo lưu kết quả:</strong> Có GPLX ô tô còn hiệu lực được <strong>miễn lý thuyết hạng A1/A</strong>. Đạt lý thuyết được bảo lưu <strong>01 năm</strong>; trượt lý thuyết dừng thi thực hành ngay.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Trừ điểm GPLX (12 điểm/năm):</strong> Nếu bị trừ hết 12 điểm phải chờ tối thiểu 6 tháng và thi kiểm tra lại kiến thức pháp luật để phục hồi điểm.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600" />
+                <span>
+                  <strong>Ghế trẻ em (&lt; 10 tuổi &amp; &lt; 1,35m):</strong> Không ngồi cùng hàng ghế lái (trừ xe 1 hàng ghế) và dùng thiết bị an toàn. Theo NĐ 238/2026, xe cá nhân bước đầu phạt cảnh cáo, không trừ điểm.
+                </span>
+              </li>
+            </ul>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
