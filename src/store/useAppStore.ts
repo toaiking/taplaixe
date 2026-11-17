@@ -32,6 +32,7 @@ interface AppState {
   srs: Record<number, QuestionProgress>;
   bookmarks: number[];
   pinnedQuestions: number[];
+  lastPracticeMap: Record<string, number>;
   examHistory: ExamResult[];
   streakDays: number;
   lastStudyDate: string | null;
@@ -48,6 +49,7 @@ interface AppState {
   setSRSBox: (questionId: number, box: SRSBox) => void;
   toggleBookmark: (questionId: number) => void;
   togglePinQuestion: (questionId: number) => void;
+  setLastPracticeQuestion: (key: string, questionId: number) => void;
   updateStudySchedule: (patch: Partial<StudySchedule>) => void;
   saveExamResult: (result: ExamResult) => void;
   resetProgress: () => void;
@@ -80,6 +82,7 @@ export const useAppStore = create<AppState>()(
       srs: {},
       bookmarks: [],
       pinnedQuestions: [],
+      lastPracticeMap: {},
       examHistory: [],
       streakDays: 1,
       lastStudyDate: null,
@@ -185,6 +188,14 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
+      setLastPracticeQuestion: (key, questionId) =>
+        set((state) => ({
+          lastPracticeMap: {
+            ...state.lastPracticeMap,
+            [key]: questionId,
+          },
+        })),
+
       updateStudySchedule: (patch) =>
         set((state) => ({
           studySchedule: { ...state.studySchedule, ...patch },
@@ -200,6 +211,7 @@ export const useAppStore = create<AppState>()(
           srs: {},
           bookmarks: [],
           pinnedQuestions: [],
+          lastPracticeMap: {},
           examHistory: [],
           streakDays: 1,
           lastStudyDate: null,
@@ -214,6 +226,7 @@ export const useAppStore = create<AppState>()(
         srs: state.srs,
         bookmarks: state.bookmarks,
         pinnedQuestions: state.pinnedQuestions,
+        lastPracticeMap: state.lastPracticeMap,
         examHistory: state.examHistory,
         streakDays: state.streakDays,
         lastStudyDate: state.lastStudyDate,

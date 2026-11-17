@@ -34,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
   const {
     srs,
     pinnedQuestions,
+    lastPracticeMap,
     studySchedule,
     navigateToPractice,
     setActiveScreen,
@@ -41,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
   } = useAppStore();
   const [confirmReset, setConfirmReset] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const lastSavedQId = lastPracticeMap['all_srs'] ?? lastPracticeMap['all_all'];
 
   const stats = useMemo(() => {
     let mastered = 0;
@@ -141,7 +143,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
               }
               className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-xs transition-all hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
             >
-              Bắt đầu lộ trình học →
+              {lastSavedQId
+                ? `Tiếp tục học (Câu ${lastSavedQId}) →`
+                : 'Bắt đầu lộ trình học →'}
             </button>
             <button
               type="button"

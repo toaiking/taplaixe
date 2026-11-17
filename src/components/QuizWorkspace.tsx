@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Lightbulb,
   Send,
+  Shuffle,
   Sparkles,
   Trophy,
   X,
@@ -61,6 +62,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     srs,
     bookmarks,
     pinnedQuestions,
+    lastPracticeMap,
     keywordMode,
     autoAdvance,
     toggleKeywordMode,
@@ -68,6 +70,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     recordAnswer,
     toggleBookmark,
     togglePinQuestion,
+    setLastPracticeQuestion,
     saveExamResult,
     setActiveScreen,
   } = useAppStore();
@@ -78,9 +81,10 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   const [chapterFilter, setChapterFilter] = useState<number | 'all'>(
     mode === 'practice' ? practicePreset.chapter : 'all'
   );
-  const [sourceFilter] = useState<PracticeSourceMode>(
+  const [sourceFilter, setSourceFilter] = useState<PracticeSourceMode>(
     mode === 'practice' ? practicePreset.sourceMode : 'all'
   );
+  const [shuffleSeed, setShuffleSeed] = useState<number>(0);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -102,7 +106,8 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   useEffect(() => {
     if (mode === 'practice') {
       setChapterFilter(practicePreset.chapter);
-      setCurrentIndex(0);
+      setSourceFilter(practicePreset.sourceMode);
+      setShuffleSeed(0);
     }
   }, [mode, practicePreset]);
 
@@ -160,6 +165,17 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
       });
     }
 
+    if (shuffleSeed > 0) {
+      const copy = [...list];
+      let s = shuffleSeed;
+      for (let i = copy.length - 1; i > 0; i--) {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        const j = s % (i + 1);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
     return list;
   }, [
     mode,
@@ -170,10 +186,41 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     srs,
     bookmarks,
     pinnedQuestions,
+    shuffleSeed,
   ]);
+
+  const practiceKey = `${chapterFilter}_${sourceFilter}`;
+
+  // Smart Resume: jump to saved question or first unmastered question when filter changes
+  useEffect(() => {
+    if (mode !== 'practice' || activeQuestions.length === 0) return;
+    if (shuffleSeed > 0) {
+      setCurrentIndex(0);
+      return;
+    }
+    const savedId = useAppStore.getState().lastPracticeMap[practiceKey];
+    if (savedId !== undefined) {
+      const idx = activeQuestions.findIndex((q) => q.id === savedId);
+      if (idx !== -1) {
+        setCurrentIndex(idx);
+        return;
+      }
+    }
+    const firstUnmasteredIdx = activeQuestions.findIndex(
+      (q) => (useAppStore.getState().srs[q.id]?.box ?? 'unlearned') !== 'mastered'
+    );
+    setCurrentIndex(firstUnmasteredIdx !== -1 ? firstUnmasteredIdx : 0);
+  }, [mode, practiceKey, shuffleSeed]);
 
   const safeIndex = Math.min(currentIndex, Math.max(0, activeQuestions.length - 1));
   const currentQ = activeQuestions[safeIndex];
+
+  // Persist current question ID for this practice filter
+  useEffect(() => {
+    if (mode === 'practice' && currentQ && shuffleSeed === 0) {
+      setLastPracticeQuestion(practiceKey, currentQ.id);
+    }
+  }, [mode, currentQ?.id, practiceKey, shuffleSeed, setLastPracticeQuestion]);
 
   const goNext = () => {
     if (autoAdvanceTimerRef.current) {
@@ -568,26 +615,60 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-5 pb-24 md:px-6 lg:pb-6">
       {/* Compact Sub-bar directly above the Unified Split-Canvas */}
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Chapter + Linear Progress */}
-        <div className="flex flex-wrap items-center gap-3">
-          {mode === 'exam' && (
-            <button
-              type="button"
-              onClick={onExit}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        {/* Left: Chapter/Filter Selector + Linear Progress */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {mode === 'exam' ? (
+            <>
+              <button
+                type="button"
+                onClick={onExit}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                ← Thoát đề
+              </button>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {title}
+              </span>
+            </>
+          ) : (
+            <select
+              value={
+                sourceFilter !== 'all'
+                  ? `mode_${sourceFilter}`
+                  : chapterFilter === 'all'
+                    ? 'chap_all'
+                    : `chap_${chapterFilter}`
+              }
+              onChange={(e) => {
+                const val = e.target.value;
+                setShuffleSeed(0);
+                if (val === 'chap_all') {
+                  setSourceFilter('all');
+                  setChapterFilter('all');
+                } else if (val.startsWith('chap_')) {
+                  setSourceFilter('all');
+                  setChapterFilter(Number(val.replace('chap_', '')));
+                } else if (val.startsWith('mode_')) {
+                  setChapterFilter('all');
+                  setSourceFilter(val.replace('mode_', '') as PracticeSourceMode);
+                }
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             >
-              ← Thoát đề
-            </button>
+              <option value="chap_all">Tất cả 600 câu</option>
+              <option value="mode_srs">Lộ trình thông minh (SRS)</option>
+              <option value="mode_critical">60 Câu Điểm Liệt</option>
+              <option value="mode_wrong">Ngân hàng câu hay sai</option>
+              <option value="mode_pinned">Câu đã ghim ({pinnedQuestions.length})</option>
+              {CHAPTERS.map((c) => (
+                <option key={c.id} value={`chap_${c.id}`}>
+                  Chương {c.id}: {c.shortTitle} ({c.range[0]}–{c.range[1]})
+                </option>
+              ))}
+            </select>
           )}
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {mode === 'exam'
-              ? title
-              : chapterMeta
-                ? `Chương ${chapterMeta.id}: ${chapterMeta.shortTitle}`
-                : title}
-          </span>
           <div className="hidden items-center gap-2 sm:flex">
-            <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
               <div
                 className="h-full rounded-full bg-indigo-600 transition-all duration-300"
                 style={{ width: `${progressPct}%` }}
@@ -602,14 +683,32 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
         {/* Right: Segmented Control + Uniform Tool Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {mode === 'practice' && (
-            <SegmentedControl
-              value={studyMode}
-              onChange={setStudyMode}
-              options={[
-                { id: 'learn', label: 'Học' },
-                { id: 'test', label: 'Thi' },
-              ]}
-            />
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  hapticTap();
+                  setShuffleSeed((s) => (s > 0 ? 0 : Date.now()));
+                }}
+                title="Đảo thứ tự câu hỏi ngẫu nhiên"
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  shuffleSeed > 0
+                    ? 'border-slate-900 bg-slate-900 text-white dark:border-indigo-600 dark:bg-indigo-600'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                }`}
+              >
+                <Shuffle className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Đảo câu</span>
+              </button>
+              <SegmentedControl
+                value={studyMode}
+                onChange={setStudyMode}
+                options={[
+                  { id: 'learn', label: 'Học' },
+                  { id: 'test', label: 'Thi' },
+                ]}
+              />
+            </>
           )}
 
           {studyMode === 'learn' && (
