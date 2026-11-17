@@ -82,9 +82,9 @@ export const Navbar: React.FC = () => {
       {activeScreen !== 'practice' && (
         <nav
           aria-label="Điều hướng chính"
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95"
         >
-          <div className="mx-auto flex max-w-md items-center justify-around">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-1">
             {NAV_ITEMS.map((item) => {
               const active = activeScreen === item.id;
               return (
@@ -92,9 +92,9 @@ export const Navbar: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveScreen(item.id)}
-                  className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                  className={`flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-center text-[11px] transition-colors sm:text-xs ${
                     active
-                      ? 'font-semibold text-slate-900 dark:text-white'
+                      ? 'bg-slate-100 font-semibold text-slate-900 dark:bg-slate-800 dark:text-white'
                       : 'font-medium text-slate-500 dark:text-slate-400'
                   }`}
                 >

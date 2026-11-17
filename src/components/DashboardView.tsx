@@ -226,18 +226,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
       </div>
 
       {/* Study Schedule & Reminder Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+      <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:flex-row sm:items-center sm:px-6 sm:py-4 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start gap-3 sm:items-center">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
             <Bell className="h-5 w-5" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
               {studySchedule.enabled
                 ? `Lịch ôn tập lúc ${studySchedule.time} • Mục tiêu ${studySchedule.dailyGoal} câu/ngày`
                 : 'Đặt lịch ôn tập & nhận thông báo nhắc giờ học'}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
               {studySchedule.enabled
                 ? 'Thông báo tự động sẽ gửi khi đến giờ học đã chọn.'
                 : 'Tạo thói quen ôn thi 15 phút mỗi ngày để đạt tỷ lệ đỗ tối đa.'}
@@ -245,7 +245,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
           {studySchedule.enabled && (
             <button
               type="button"
@@ -271,33 +271,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
       </div>
 
       {/* 120 Traffic Simulation 2026 Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-200/80 bg-indigo-50/50 px-6 py-4 dark:border-indigo-900/60 dark:bg-indigo-950/30">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+      <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-5 sm:flex-row sm:items-center sm:px-6 sm:py-4 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+        <div className="flex items-start gap-3 sm:items-center">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
             <Film className="h-5 w-5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 120 Tình Huống Mô Phỏng Giao Thông 2026
               </span>
-              <span className="rounded-md bg-indigo-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-white">
+              <span className="shrink-0 whitespace-nowrap rounded-md bg-indigo-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-white">
                 TT 17/2026/TT-BXD
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
               120 video tình huống thực tế + 480 câu trắc nghiệm nhận diện nguy cơ (4 ý × 0,25đ = 1,0đ/câu) &amp; 18 bộ đề chuẩn.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveScreen('simulation')}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
-        >
-          Vào ôn 120 tình huống →
-        </button>
+        <div className="shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('simulation')}
+            className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+          >
+            Vào ôn 120 tình huống →
+          </button>
+        </div>
       </div>
 
       {/* 6 Rich Chapter Cards */}
