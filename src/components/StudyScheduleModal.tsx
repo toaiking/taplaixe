@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, BellRing, CalendarPlus, Check, Clock, Smartphone, X } from 'lucide-react';
+import { Bell, BellRing, Check, Clock, Smartphone, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PracticeSourceMode } from '../types/question';
 import {
-  downloadScheduleICS,
   getNotificationPermission,
   isIOSNonStandalone,
   requestNotificationPermission,
@@ -80,22 +79,22 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
     if (res.sentOS) {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát chuông báo + gửi thông báo hệ thống thành công!',
+        msg: 'Đã phát chuông báo + gửi thông báo trực tiếp lên thiết bị thành công!',
       });
     } else if (iosNeedsInstall) {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát âm báo & banner trong app! Trên iPhone, hãy chọn "Chia sẻ → Thêm vào MH chính" hoặc bấm "Lưu vào Lịch máy" bên dưới để nhận báo thức nền.',
+        msg: 'Đã phát chuông báo trong ứng dụng! Trên iPhone, bạn có thể bấm nút "Cài App" (Thêm vào MH chính) để nhận thông báo đẩy của iOS.',
       });
     } else if (p === 'denied') {
       setTestStatus({
         ok: false,
-        msg: 'Đã phát âm báo & banner trong app, nhưng trình duyệt đang chặn thông báo đẩy. Hãy bật quyền Thông báo ở thanh địa chỉ hoặc dùng nút "Lưu vào Lịch máy".',
+        msg: 'Đã phát chuông báo trong ứng dụng! Nếu muốn hiện thông báo ngoài màn hình, hãy cho phép quyền Thông báo ở biểu tượng ổ khóa trên thanh địa chỉ.',
       });
     } else {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát âm báo & hiển thị nhắc nhở trong ứng dụng!',
+        msg: 'Đã phát chuông báo & hiển thị nhắc nhở trực tiếp trong ứng dụng!',
       });
     }
   };
@@ -127,7 +126,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     Lịch Ôn Tập &amp; Nhắc Nhở
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Hoạt động trên cả máy tính và điện thoại
+                    Gửi thông báo &amp; chuông nhắc trực tiếp trên trình duyệt / App
                   </p>
                 </div>
               </div>
@@ -148,15 +147,15 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     Bật tự động nhắc giờ học
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    Trạng thái trình duyệt:{' '}
+                    Trạng thái thông báo:{' '}
                     <span className="font-mono font-semibold">
                       {perm === 'granted'
-                        ? 'Đã cấp phép'
+                        ? 'Đã bật'
                         : perm === 'denied'
-                          ? 'Đang chặn'
+                          ? 'Chỉ báo chuông trong app'
                           : perm === 'unsupported'
-                            ? 'Chế độ chuông trong app'
-                            : 'Chưa cấp phép'}
+                            ? 'Báo chuông trong app'
+                            : 'Sẵn sàng'}
                     </span>
                   </div>
                 </div>
@@ -184,7 +183,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
                   <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                   <span>
-                    <strong>Mẹo trên iPhone/iPad:</strong> Chọn <em>Chia sẻ → Thêm vào MH chính</em> để nhận thông báo đẩy iOS, hoặc bấm nút <strong>Lưu vào Lịch máy (.ics)</strong> bên dưới để báo thức ngay cả khi tắt trình duyệt.
+                    <strong>Mẹo trên iPhone/iPad:</strong> Bạn có thể bấm nút <strong>Cài App</strong> trên thanh đầu trang (<em>Chia sẻ → Thêm vào MH chính</em>) để nhận thông báo đẩy chuẩn của iOS.
                   </span>
                 </div>
               )}
@@ -275,22 +274,6 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 </select>
               </div>
 
-              {/* Native OS Calendar / Alarm Sync (.ics) */}
-              <button
-                type="button"
-                onClick={() =>
-                  downloadScheduleICS(
-                    studySchedule.time,
-                    studySchedule.days,
-                    studySchedule.dailyGoal
-                  )
-                }
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100/80 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300"
-              >
-                <CalendarPlus className="h-4 w-4" />
-                Lưu vào Lịch điện thoại / Máy tính (.ics) để báo khi tắt máy
-              </button>
-
               {testStatus && (
                 <div
                   className={`rounded-xl border px-3 py-2.5 text-xs font-medium leading-relaxed ${
@@ -318,7 +301,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                   className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-indigo-600"
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Hoàn tất
+                  Lưu lịch ôn
                 </button>
               </div>
             </div>
