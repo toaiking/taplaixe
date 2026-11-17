@@ -19,21 +19,23 @@ export const Navbar: React.FC = () => {
     <>
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          {/* Left: Brand */}
+          {/* Left: App Icon + Brand Name (No "2025" text) */}
           <button
             type="button"
             onClick={() => setActiveScreen('dashboard')}
-            className="flex items-center gap-2 text-left transition-opacity hover:opacity-80"
+            className="flex items-center gap-2.5 text-left transition-opacity hover:opacity-85"
           >
+            <img
+              src="/favicon.svg"
+              alt="Logo GPLX 600"
+              className="h-8 w-8 rounded-lg shadow-2xs"
+            />
             <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
               GPLX 600
             </span>
-            <span className="rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
-              2025
-            </span>
           </button>
 
-          {/* Center: 4 Official Tabs with fixed-height bottom underline (zero layout shift) */}
+          {/* Center: 4 Official Tabs with fixed-height bottom underline */}
           <nav className="hidden h-16 items-stretch gap-7 md:flex">
             {NAV_ITEMS.map((item) => {
               const active = activeScreen === item.id;
@@ -69,7 +71,7 @@ export const Navbar: React.FC = () => {
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation Bar (only on Dashboard/ExamHub/Handbook; QuizWorkspace has its own Floating Thumb-Bar) */}
+      {/* Mobile Bottom Navigation Bar */}
       {activeScreen !== 'practice' && (
         <nav
           aria-label="Điều hướng chính"

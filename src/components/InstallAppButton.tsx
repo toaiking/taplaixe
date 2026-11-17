@@ -51,7 +51,7 @@ export const InstallAppButton: React.FC = () => {
       <button
         onClick={handleInstallClick}
         title="Cài đặt ứng dụng về máy"
-        className="flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-teal-700"
+        className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
       >
         <Download className="h-3.5 w-3.5" />
         <span>Cài App</span>
