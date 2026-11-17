@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Question } from '../types/question';
 
-export type MatrixFilter = 'all' | 'unanswered' | 'wrong' | 'critical';
+export type MatrixFilter = 'all' | 'unanswered' | 'wrong' | 'critical' | 'pinned';
 
 interface QuestionMatrixProps {
   questions: Question[];
   currentIndex: number;
   answers: Record<number, number>;
   bookmarks: number[];
+  pinnedQuestions?: number[];
   isExamMode: boolean;
   touchMode?: boolean;
   onSelectIndex: (idx: number) => void;
@@ -18,6 +19,7 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
   currentIndex,
   answers,
   bookmarks,
+  pinnedQuestions = [],
   isExamMode,
   touchMode = false,
   onSelectIndex,
@@ -33,9 +35,10 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
         if (filter === 'wrong')
           return userAns !== undefined && userAns !== q.correctAnswer;
         if (filter === 'critical') return q.isCritical;
+        if (filter === 'pinned') return pinnedQuestions.includes(q.id);
         return true;
       });
-  }, [questions, answers, filter]);
+  }, [questions, answers, filter, pinnedQuestions]);
 
   return (
     <div className="flex h-full flex-col">
@@ -45,6 +48,7 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
           { id: 'all' as MatrixFilter, label: 'Tất cả' },
           { id: 'unanswered' as MatrixFilter, label: 'Chưa làm' },
           ...(!isExamMode ? [{ id: 'wrong' as MatrixFilter, label: 'Câu sai' }] : []),
+          { id: 'pinned' as MatrixFilter, label: 'Đã ghim' },
           { id: 'critical' as MatrixFilter, label: 'Điểm liệt' },
         ].map((tab) => {
           const active = filter === tab.id;
@@ -114,10 +118,12 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
                   className="absolute top-1 left-1 h-1.5 w-1.5 rounded-full bg-red-500"
                 />
               )}
-              {isBookmarked && (
+              {(isBookmarked || pinnedQuestions.includes(q.id)) && (
                 <span
-                  title="Đã đánh dấu"
-                  className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-amber-400"
+                  title={pinnedQuestions.includes(q.id) ? 'Đã ghim' : 'Đã đánh dấu'}
+                  className={`absolute top-1 right-1 h-1.5 w-1.5 rounded-full ${
+                    pinnedQuestions.includes(q.id) ? 'bg-indigo-500' : 'bg-amber-400'
+                  }`}
                 />
               )}
             </button>

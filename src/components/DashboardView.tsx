@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  Bell,
   BookOpen,
   Compass,
   Flame,
   Gauge,
   HeartHandshake,
+  Pin,
   RotateCcw,
   Signpost,
   Wrench,
@@ -13,6 +15,7 @@ import {
 import { CHAPTERS } from '../data/chapters';
 import { useAppStore } from '../store/useAppStore';
 import { Question } from '../types/question';
+import { StudyScheduleModal } from './StudyScheduleModal';
 
 interface DashboardViewProps {
   questions: Question[];
@@ -28,9 +31,16 @@ const CHAPTER_ICONS: Record<number, React.ReactNode> = {
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
-  const { srs, navigateToPractice, setActiveScreen, resetProgress } =
-    useAppStore();
+  const {
+    srs,
+    pinnedQuestions,
+    studySchedule,
+    navigateToPractice,
+    setActiveScreen,
+    resetProgress,
+  } = useAppStore();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const stats = useMemo(() => {
     let mastered = 0;
@@ -143,21 +153,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
           </div>
         </div>
 
-        {/* Col-span-4: 2 Emergency Cards */}
-        <div className="space-y-4 lg:col-span-4">
+        {/* Col-span-4: 3 Focus Cards (Điểm liệt, Hay sai, Đã ghim) */}
+        <div className="flex flex-col justify-between gap-3.5 lg:col-span-4">
           <button
             type="button"
             onClick={() =>
               navigateToPractice({ chapter: 'all', sourceMode: 'critical' })
             }
-            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-rose-500 bg-white p-5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-rose-500 dark:bg-slate-900"
+            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-rose-500 bg-white p-4.5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-rose-500 dark:bg-slate-900"
           >
             <div>
               <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
                 <Flame className="h-4 w-4 text-rose-500" />
                 60 Câu Điểm Liệt
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 Bắt buộc đúng 100% khi thi
               </p>
             </div>
@@ -171,20 +181,86 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
             onClick={() =>
               navigateToPractice({ chapter: 'all', sourceMode: 'wrong' })
             }
-            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-amber-500 bg-white p-5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-amber-500 dark:bg-slate-900"
+            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-amber-500 bg-white p-4.5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-amber-500 dark:bg-slate-900"
           >
             <div>
               <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 Ngân Hàng Câu Hay Sai
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 Các câu cần xử lý ngay
               </p>
             </div>
             <span className="font-mono text-lg font-semibold tabular-nums text-amber-600 dark:text-amber-400">
               {stats.wrong}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              navigateToPractice({ chapter: 'all', sourceMode: 'pinned' })
+            }
+            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-indigo-500 bg-white p-4.5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-indigo-500 dark:bg-slate-900"
+          >
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                <Pin className="h-4 w-4 text-indigo-500" />
+                Câu Hỏi Đã Ghim
+              </div>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Các câu bạn tự ghim để xem lại
+              </p>
+            </div>
+            <span className="font-mono text-lg font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
+              {pinnedQuestions.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Study Schedule & Reminder Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              {studySchedule.enabled
+                ? `Lịch ôn tập lúc ${studySchedule.time} • Mục tiêu ${studySchedule.dailyGoal} câu/ngày`
+                : 'Đặt lịch ôn tập & nhận thông báo nhắc giờ học'}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {studySchedule.enabled
+                ? 'Thông báo tự động sẽ gửi khi đến giờ học đã chọn.'
+                : 'Tạo thói quen ôn thi 15 phút mỗi ngày để đạt tỷ lệ đỗ tối đa.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {studySchedule.enabled && (
+            <button
+              type="button"
+              onClick={() =>
+                navigateToPractice({
+                  chapter: 'all',
+                  sourceMode: studySchedule.focusMode,
+                })
+              }
+              className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 dark:bg-indigo-600"
+            >
+              Ôn theo lịch →
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setScheduleOpen(true)}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            {studySchedule.enabled ? 'Chỉnh lịch' : 'Tạo lịch ôn tập'}
           </button>
         </div>
       </div>
@@ -288,6 +364,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
           })}
         </div>
       </div>
+      <StudyScheduleModal
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+      />
     </div>
   );
 };

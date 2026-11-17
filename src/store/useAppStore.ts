@@ -6,6 +6,7 @@ import {
   QuestionProgress,
   SRSBox,
   ScreenId,
+  StudySchedule,
 } from '../types/question';
 
 function getTodayStr(): string {
@@ -30,10 +31,12 @@ interface AppState {
   practicePreset: PracticePreset;
   srs: Record<number, QuestionProgress>;
   bookmarks: number[];
+  pinnedQuestions: number[];
   examHistory: ExamResult[];
   streakDays: number;
   lastStudyDate: string | null;
   cheatSheetOpen: boolean;
+  studySchedule: StudySchedule;
 
   toggleDarkMode: () => void;
   toggleKeywordMode: () => void;
@@ -44,6 +47,8 @@ interface AppState {
   recordAnswer: (questionId: number, isCorrect: boolean) => void;
   setSRSBox: (questionId: number, box: SRSBox) => void;
   toggleBookmark: (questionId: number) => void;
+  togglePinQuestion: (questionId: number) => void;
+  updateStudySchedule: (patch: Partial<StudySchedule>) => void;
   saveExamResult: (result: ExamResult) => void;
   resetProgress: () => void;
 }
@@ -53,6 +58,15 @@ const DEFAULT_PRESET: PracticePreset = {
   sourceMode: 'all',
   onlyWithImage: false,
   onlyUnmastered: false,
+};
+
+const DEFAULT_SCHEDULE: StudySchedule = {
+  enabled: false,
+  time: '20:00',
+  days: [1, 2, 3, 4, 5, 6, 0],
+  dailyGoal: 25,
+  focusMode: 'srs',
+  lastNotifiedDate: null,
 };
 
 export const useAppStore = create<AppState>()(
@@ -65,10 +79,12 @@ export const useAppStore = create<AppState>()(
       practicePreset: DEFAULT_PRESET,
       srs: {},
       bookmarks: [],
+      pinnedQuestions: [],
       examHistory: [],
       streakDays: 1,
       lastStudyDate: null,
       cheatSheetOpen: false,
+      studySchedule: DEFAULT_SCHEDULE,
 
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
 
@@ -159,6 +175,21 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
+      togglePinQuestion: (questionId) =>
+        set((state) => {
+          const exists = state.pinnedQuestions.includes(questionId);
+          return {
+            pinnedQuestions: exists
+              ? state.pinnedQuestions.filter((id) => id !== questionId)
+              : [...state.pinnedQuestions, questionId],
+          };
+        }),
+
+      updateStudySchedule: (patch) =>
+        set((state) => ({
+          studySchedule: { ...state.studySchedule, ...patch },
+        })),
+
       saveExamResult: (result) =>
         set((state) => ({
           examHistory: [result, ...state.examHistory].slice(0, 30),
@@ -168,6 +199,7 @@ export const useAppStore = create<AppState>()(
         set({
           srs: {},
           bookmarks: [],
+          pinnedQuestions: [],
           examHistory: [],
           streakDays: 1,
           lastStudyDate: null,
@@ -181,9 +213,11 @@ export const useAppStore = create<AppState>()(
         autoAdvance: state.autoAdvance,
         srs: state.srs,
         bookmarks: state.bookmarks,
+        pinnedQuestions: state.pinnedQuestions,
         examHistory: state.examHistory,
         streakDays: state.streakDays,
         lastStudyDate: state.lastStudyDate,
+        studySchedule: state.studySchedule,
       }),
     }
   )

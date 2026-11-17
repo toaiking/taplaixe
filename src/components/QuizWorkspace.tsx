@@ -60,12 +60,14 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     practicePreset,
     srs,
     bookmarks,
+    pinnedQuestions,
     keywordMode,
     autoAdvance,
     toggleKeywordMode,
     toggleAutoAdvance,
     recordAnswer,
     toggleBookmark,
+    togglePinQuestion,
     saveExamResult,
     setActiveScreen,
   } = useAppStore();
@@ -126,6 +128,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
       if (sourceFilter === 'critical' && !q.isCritical) return false;
       if (sourceFilter === 'wrong' && box !== 'wrong') return false;
       if (sourceFilter === 'bookmarked' && !bookmarks.includes(q.id)) return false;
+      if (sourceFilter === 'pinned' && !pinnedQuestions.includes(q.id)) return false;
       if (sourceFilter === 'speed_distance') {
         const lower = q.question.toLowerCase();
         if (!lower.includes('tốc độ') && !lower.includes('khoảng cách')) return false;
@@ -166,6 +169,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     practicePreset,
     srs,
     bookmarks,
+    pinnedQuestions,
   ]);
 
   const safeIndex = Math.min(currentIndex, Math.max(0, activeQuestions.length - 1));
@@ -352,6 +356,12 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
         if (currentQ) {
           e.preventDefault();
           toggleBookmark(currentQ.id);
+        }
+      } else if (e.key.toLowerCase() === 'p') {
+        if (currentQ) {
+          e.preventDefault();
+          hapticTap();
+          togglePinQuestion(currentQ.id);
         }
       }
     };
@@ -717,10 +727,15 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                 <QuestionCard
                   question={currentQ}
                   isBookmarked={isBookmarked}
+                  isPinned={pinnedQuestions.includes(currentQ.id)}
                   keywordMode={keywordMode}
                   onToggleBookmark={() => {
                     hapticTap();
                     toggleBookmark(currentQ.id);
+                  }}
+                  onTogglePin={() => {
+                    hapticTap();
+                    togglePinQuestion(currentQ.id);
                   }}
                   onEnableKeywords={() => {
                     if (!keywordMode) toggleKeywordMode();
@@ -889,7 +904,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           </motion.div>
 
           <p className="mt-3 hidden text-center text-[11px] text-slate-400 lg:block">
-            1-4 Chọn • ←/→ Chuyển • H Từ khóa • Z Phóng to • B Lưu • G Bảng câu hỏi
+            1-4 Chọn • ←/→ Chuyển • H Từ khóa • Z Phóng to • P Ghim • B Lưu • G Bảng câu hỏi
           </p>
         </>
       )}
@@ -1018,6 +1033,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                   currentIndex={safeIndex}
                   answers={answers}
                   bookmarks={bookmarks}
+                  pinnedQuestions={pinnedQuestions}
                   isExamMode={studyMode === 'test'}
                   onSelectIndex={(idx) => {
                     setCurrentIndex(idx);
@@ -1042,6 +1058,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           currentIndex={safeIndex}
           answers={answers}
           bookmarks={bookmarks}
+          pinnedQuestions={pinnedQuestions}
           isExamMode={studyMode === 'test'}
           touchMode={true}
           onSelectIndex={(idx) => {

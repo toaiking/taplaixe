@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bookmark, Lightbulb, ZoomIn } from 'lucide-react';
+import { Bookmark, Lightbulb, Pin, ZoomIn } from 'lucide-react';
 import { Question } from '../types/question';
 import { hapticTap } from '../utils/haptics';
 import { getQuestionExplanation } from '../utils/mnemonics';
@@ -9,8 +9,10 @@ import { HighlightedText } from './HighlightedText';
 interface QuestionCardProps {
   question: Question;
   isBookmarked: boolean;
+  isPinned: boolean;
   keywordMode: boolean;
   onToggleBookmark: () => void;
+  onTogglePin: () => void;
   onEnableKeywords: () => void;
   onOpenLightbox: (src: string) => void;
 }
@@ -18,8 +20,10 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
   isBookmarked,
+  isPinned,
   keywordMode,
   onToggleBookmark,
+  onTogglePin,
   onEnableKeywords,
   onOpenLightbox,
 }) => {
@@ -58,19 +62,35 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleBookmark}
-          title="Đánh dấu câu hỏi (B hoặc Space)"
-          aria-label="Đánh dấu câu hỏi"
-          className={`rounded-lg p-1.5 transition-colors ${
-            isBookmarked
-              ? 'text-amber-500'
-              : 'text-slate-300 hover:text-amber-500 dark:text-slate-600 dark:hover:text-amber-400'
-          }`}
-        >
-          <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-amber-500' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onTogglePin}
+            title="Ghim câu hỏi quan trọng (Phím P)"
+            aria-label="Ghim câu hỏi"
+            className={`rounded-lg p-1.5 transition-colors ${
+              isPinned
+                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400'
+                : 'text-slate-300 hover:text-indigo-600 dark:text-slate-600 dark:hover:text-indigo-400'
+            }`}
+          >
+            <Pin className={`h-4 w-4 ${isPinned ? 'fill-indigo-600 dark:fill-indigo-400' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleBookmark}
+            title="Đánh dấu câu hỏi (B hoặc Space)"
+            aria-label="Đánh dấu câu hỏi"
+            className={`rounded-lg p-1.5 transition-colors ${
+              isBookmarked
+                ? 'text-amber-500'
+                : 'text-slate-300 hover:text-amber-500 dark:text-slate-600 dark:hover:text-amber-400'
+            }`}
+          >
+            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-amber-500' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Long-press Quick Tip Tooltip */}

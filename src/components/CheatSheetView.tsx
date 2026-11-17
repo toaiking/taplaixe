@@ -470,37 +470,96 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
           <div className="grid gap-5 md:grid-cols-2">
             {[
               {
-                title: 'Quy tắc giải sa hình 5 bước',
+                tag: 'Chương 1–2',
+                title: '1. Mẹo Từ Khóa Câu Chữ (Chốt trong 3 giây)',
                 lines: [
-                  '1. Nhất chớm: Xe đã vào giao lộ trước đi trước.',
-                  '2. Nhì ưu: Hỏa → Sự → An → Thương.',
-                  '3. Tam đường: Xe trên đường ưu tiên đi trước.',
-                  '4. Tứ hướng: Bên phải không vướng đi trước.',
-                  '5. Ngũ hành: Rẽ phải → Đi thẳng → Rẽ trái.',
+                  'Thấy "Bị nghiêm cấm" hoặc "Không được phép" → Chọn ngay (chính xác ~98% câu điểm liệt).',
+                  'Thấy "Giảm tốc độ, đi sát về bên phải" → Chọn ngay khi gặp xe ưu tiên, đường hẹp, tầm nhìn hạn chế.',
+                  'Thấy "Cơ quan có thẩm quyền" (cho phép) → Chọn ngay với câu hỏi cấp phép đặc biệt.',
+                  'Đáp án có "Cả hai ý trên" / "Cả ba ý trên" → Kiểm tra nhanh 2 ý đầu đều đúng thì chọn tổng hợp.',
                 ],
+                trap: 'Ngoại lệ: Câu hỏi về tốc độ hoặc khoảng cách phải đọc kỹ trị số, không chọn máy móc theo từ khóa.',
               },
               {
-                title: 'Mẹo dừng/đỗ, vượt xe & từ khóa 3 giây',
+                tag: 'Chương 1',
+                title: '2. Bộ Con Số Vàng Cần Thuộc Lòng',
                 lines: [
-                  'Thấy "Bị nghiêm cấm" / "Không được phép" → Chọn ngay.',
-                  'Thấy "Giảm tốc độ, đi sát về bên phải" → Chọn ngay.',
-                  'Vượt xe bên trái (trừ khi xe trước rẽ trái/đang dừng hoặc xe chuyên dùng làm việc).',
-                  'Cấm dừng/đỗ trên cầu, hầm, giao lộ, đường sắt, phần người đi bộ.',
+                  'Tốc độ trong KĐDC: Đường đôi 60 km/h • Đường 2 chiều 50 km/h • Xe gắn máy tối đa 40 km/h.',
+                  'Khoảng cách an toàn: 60 km/h → 35m • 80 km/h → 55m • 100 km/h → 70m • 120 km/h → 100m.',
+                  'Tuổi GPLX: 18 (A1, A, B1, B, C1) • 21 (C) • 24 (D1, D2) • 27 (D).',
+                  'Niên hạn ô tô: Xe tải 25 năm • Xe chở người > 9 chỗ 20 năm • Nồng độ cồn = 0.',
                 ],
+                trap: 'Lưu ý: Đèn vàng nhấp nháy ĐƯỢC ĐI nhưng phải giảm tốc độ, chú ý nhường người đi bộ.',
+              },
+              {
+                tag: 'Chương 6',
+                title: '3. Quy Tắc Sa Hình 5 Bước & 4 Bẫy Kinh Điển',
+                lines: [
+                  'Bước 1 — Nhất chớm: Xe đã tiến vào trong giao lộ trước được đi trước.',
+                  'Bước 2 — Nhì ưu: Hỏa (Cứu hỏa) → Sự (Quân sự) → An (Công an) → Thương (Cứu thương).',
+                  'Bước 3 — Tam đường: Xe trên đường ưu tiên (biển W.207) đi trước xe đường không ưu tiên (W.208).',
+                  'Bước 4 — Tứ hướng: Quyền tay phải không vướng • Bước 5 — Ngũ hành: Rẽ phải → Đi thẳng → Rẽ trái.',
+                ],
+                trap: 'Bẫy hay sai: Có vòng xuyến nhường bên TRÁI; Không vòng xuyến nhường bên PHẢI. Xe ưu tiên gặp biển STOP vẫn phải dừng!',
+              },
+              {
+                tag: 'Chương 5',
+                title: '4. Mẹo Biển Báo Cấm, Nguy Hiểm & Hiệu Lệnh',
+                lines: [
+                  'Cấm xe nhỏ thì cấm luôn xe lớn (Cấm ô tô con → cấm tải, khách; Cấm tải → cấm máy kéo, rơ-moóc).',
+                  'Biển cấm rẽ trái (P.123a) VẪN ĐƯỢC quay đầu; Biển cấm quay đầu (P.124a) VẪN ĐƯỢC rẽ trái.',
+                  'Biển tròn xanh (Hiệu lệnh) = Bắt buộc theo hướng mũi tên; riêng R.301a đặt trước ngã tư.',
+                  'Biển phụ hình loại xe đặt dưới biển chính: Chỉ áp dụng riêng cho loại xe vẽ trên biển phụ.',
+                ],
+                trap: 'Bẫy hay sai: Biển tải trọng trục (7t có hình trục) khác với tải trọng toàn bộ (10t không có trục).',
+              },
+              {
+                tag: 'Chương 5',
+                title: '5. Mẹo Vạch Kẻ Đường & Hiệu Lệnh CSGT',
+                lines: [
+                  'Vạch màu VÀNG = Phân chia 2 chiều ngược nhau • Vạch màu TRẮNG = Phân chia làn cùng chiều.',
+                  'Vạch NÉT ĐỨT = Được phép đè vạch, chuyển làn • Vạch NÉT LIỀN = Cấm lấn làn, cấm đè.',
+                  'CSGT dang ngang 2 tay: Phía trước & sau DỪNG LẠI; Bên phải & trái ĐƯỢC ĐI tất cả các hướng.',
+                  'CSGT giơ tay thẳng đứng: Tất cả các hướng DỪNG LẠI (trừ xe đã ở trong giao lộ).',
+                ],
+                trap: 'Lưu ý: Vạch mắt võng màu vàng ở nút giao báo KHÔNG ĐƯỢC dừng xe trong phạm vi vạch.',
+              },
+              {
+                tag: 'Chương 3–4',
+                title: '6. Mẹo Kỹ Thuật Lái Xe, Taplo & Dừng Đỗ',
+                lines: [
+                  'Xuống dốc dài: Về số thấp (L/1/2), kết hợp phanh động cơ — Tuyệt đối không về số N hoặc tắt máy.',
+                  'Vượt xe: Luôn vượt bên trái (trừ khi xe trước đang rẽ trái hoặc xe chuyên dùng đang làm việc).',
+                  'Cấm dừng/đỗ: Trên cầu, hầm, đường sắt, phần người đi bộ, ngã ba/tư, che khuất biển báo.',
+                  'Taplo: Đèn ĐỎ = Nguy hiểm dừng ngay (phanh, dầu, nhiệt, ắc quy) • Đèn VÀNG = Kiểm tra (ABS, động cơ).',
+                ],
+                trap: 'Lưu ý: Trên đường cao tốc TUYỆT ĐỐI không lùi xe, không quay đầu, không đi vào làn dừng khẩn cấp.',
               },
             ].map((box) => (
               <div
                 key={box.title}
-                className="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+                className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
               >
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {box.title}
-                </h3>
-                <ul className="mt-3 space-y-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                  {box.lines.map((l) => (
-                    <li key={l}>{l}</li>
-                  ))}
-                </ul>
+                <div>
+                  <span className="inline-block rounded-md bg-indigo-50 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+                    {box.tag}
+                  </span>
+                  <h3 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
+                    {box.title}
+                  </h3>
+                  <ul className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
+                    {box.lines.map((l) => (
+                      <li key={l} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
+                        <span>{l}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+                  <strong>⚠️ Lưu ý bẫy:</strong> {box.trap}
+                </div>
               </div>
             ))}
           </div>

@@ -27,9 +27,19 @@ export type PracticeSourceMode =
   | 'srs'
   | 'wrong'
   | 'bookmarked'
+  | 'pinned'
   | 'speed_distance'
   | 'taplo'
   | 'csgt_markings';
+
+export interface StudySchedule {
+  enabled: boolean;
+  time: string; // "HH:MM"
+  days: number[]; // 0 = CN, 1 = T2 ... 6 = T7
+  dailyGoal: number;
+  focusMode: PracticeSourceMode;
+  lastNotifiedDate: string | null;
+}
 
 export interface PracticePreset {
   chapter: number | 'all';
