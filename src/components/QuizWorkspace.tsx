@@ -5,19 +5,18 @@ import {
   ArrowLeft,
   Bookmark,
   BookOpen,
-  CheckCircle2,
+  Check,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   Clock,
   Flame,
+  LayoutGrid,
   Lightbulb,
-  PanelRightClose,
-  PanelRightOpen,
   Send,
   Sparkles,
   Trophy,
-  XCircle,
+  X,
   Zap,
 } from 'lucide-react';
 import { CHAPTERS } from '../data/chapters';
@@ -26,7 +25,6 @@ import { ExamResult, PracticeSourceMode, Question } from '../types/question';
 import { hapticError, hapticSuccess, hapticTap } from '../utils/haptics';
 import { getQuestionExplanation } from '../utils/mnemonics';
 import { BottomSheet } from './BottomSheet';
-import { HighlightedText } from './HighlightedText';
 import { ImageLightbox } from './ImageLightbox';
 import { QuestionCard } from './QuestionCard';
 import { QuestionMatrix } from './QuestionMatrix';
@@ -90,7 +88,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   const [timeLeft, setTimeLeft] = useState(
     examMeta ? examMeta.durationMinutes * 60 : 0
   );
-  const [showMatrix, setShowMatrix] = useState(true);
+  const [showDrawer, setShowDrawer] = useState(false);
   const [showMatrixSheet, setShowMatrixSheet] = useState(false);
   const [showExplanationSheet, setShowExplanationSheet] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -209,7 +207,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
         }
       } else {
         hapticError();
-        // On mobile/touch screens (< 1024px), automatically slide up the Explanation Bottom Sheet
         if (window.innerWidth < 1024) {
           setShowExplanationSheet(true);
         }
@@ -287,7 +284,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     return () => clearInterval(timer);
   }, [mode, timeLeft, examResult]);
 
-  // Global Keyboard Shortcuts
+  // Global Keyboard Shortcuts: 1-4, Arrows, Enter, H, Z, B, Space, G
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (
@@ -311,6 +308,20 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
         if (e.key === 'Escape' || e.key.toLowerCase() === 'z') {
           e.preventDefault();
           setLightboxSrc(null);
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        setShowDrawer((v) => !v);
+        return;
+      }
+
+      if (showDrawer) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowDrawer(false);
         }
         return;
       }
@@ -354,6 +365,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
     currentQ,
     activeQuestions.length,
     lightboxSrc,
+    showDrawer,
     showSubmitModal,
     showMatrixSheet,
     showExplanationSheet,
@@ -372,7 +384,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   // EXAM RESULT VIEW
   if (examResult) {
     return (
-      <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950">
+      <div className="min-h-screen bg-[#F8FAFC] pb-20 dark:bg-slate-950">
         <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
           <div
             className={`rounded-2xl border-2 p-6 ${
@@ -395,7 +407,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                   )}
                 </div>
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <div className="text-xs font-bold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                     Kết quả: {examResult.examName}
                   </div>
                   <h1
@@ -459,28 +471,25 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        Câu {idx + 1} (Gốc #{q.id})
+                      <span className="font-mono text-xs font-bold text-blue-600">
+                        CÂU {idx + 1} (#{q.id})
                       </span>
                       {q.isCritical && (
-                        <span className="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
-                          <Flame className="h-3.5 w-3.5" /> Điểm Liệt
+                        <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
+                          <Flame className="h-3 w-3" /> Điểm liệt
                         </span>
                       )}
                     </div>
-                    {isCorrect ? (
-                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                        <CheckCircle2 className="h-4 w-4" /> Đúng
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-400">
-                        <XCircle className="h-4 w-4" />{' '}
-                        {userAns === undefined ? 'Chưa chọn' : 'Sai'}
-                      </span>
-                    )}
+                    <span
+                      className={`text-xs font-bold ${
+                        isCorrect ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {isCorrect ? '✓ Đúng' : userAns === undefined ? 'Chưa chọn' : '✕ Sai'}
+                    </span>
                   </div>
 
-                  <p className="mt-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {q.question}
                   </p>
 
@@ -488,7 +497,7 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                     <button
                       type="button"
                       onClick={() => setLightboxSrc(q.image)}
-                      className="mt-3 inline-flex rounded-xl border border-slate-200 bg-white p-2"
+                      className="mt-3 inline-flex rounded-xl border border-slate-100 bg-slate-50 p-2"
                     >
                       <img
                         src={q.image}
@@ -544,59 +553,74 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
   const explanation = currentQ ? getQuestionExplanation(currentQ) : null;
   const isBookmarked = currentQ ? bookmarks.includes(currentQ.id) : false;
   const eliminatedList = currentQ ? eliminated[currentQ.id] ?? [] : [];
+  const progressPct = activeQuestions.length
+    ? Math.round(((safeIndex + 1) / activeQuestions.length) * 100)
+    : 0;
+  const chapterMeta = currentQ
+    ? CHAPTERS.find((c) => c.id === currentQ.chapter)
+    : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 lg:h-screen lg:overflow-hidden dark:bg-slate-950">
-      {/* 1. Top Navigation Bar (h-14 / h-16) */}
-      <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 md:h-16 md:px-6 dark:border-slate-800 dark:bg-gray-900">
-        <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFC] lg:h-screen lg:overflow-hidden dark:bg-slate-950">
+      {/* 1. Ultra-Clean Top Header Bar (h-14) */}
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200/60 bg-white/80 px-4 backdrop-blur md:px-6 dark:border-slate-800 dark:bg-gray-900/80">
+        {/* Left: Minimal Arrow + Chapter Name */}
+        <div className="flex min-w-0 items-center gap-2.5">
           <button
             type="button"
             onClick={onExit}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            aria-label="Quay lại"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Quay lại</span>
           </button>
-
-          <div className="min-w-0">
-            <div className="truncate text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
-              {title}
-            </div>
-            {currentQ && (
-              <div className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Ch.{currentQ.chapter}:{' '}
-                {CHAPTERS.find((c) => c.id === currentQ.chapter)?.shortTitle}
-              </div>
-            )}
-          </div>
+          <span className="truncate text-sm font-medium text-slate-500 dark:text-slate-400">
+            {mode === 'exam'
+              ? title
+              : chapterMeta
+                ? `Chương ${chapterMeta.id}: ${chapterMeta.shortTitle}`
+                : title}
+          </span>
         </div>
 
-        {/* Center Toggles */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Center: Linear Progress Bar */}
+        <div className="hidden items-center gap-2.5 md:flex">
+          <div className="h-1.5 w-48 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <div
+              className="h-full rounded-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">
+            {activeQuestions.length ? `${safeIndex + 1} / ${activeQuestions.length}` : '0 / 0'}
+          </span>
+        </div>
+
+        {/* Right: Minimalist Segmented Control + Ghost Tools */}
+        <div className="flex items-center gap-1.5">
           {mode === 'practice' && (
-            <div className="hidden rounded-xl border border-slate-200 bg-slate-100 p-0.5 md:flex dark:border-slate-800 dark:bg-slate-950">
+            <div className="hidden rounded-lg bg-slate-100 p-0.5 sm:flex dark:bg-slate-800">
               <button
                 type="button"
                 onClick={() => setStudyMode('learn')}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   studyMode === 'learn'
-                    ? 'bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-white text-slate-900 shadow-xs dark:bg-gray-900 dark:text-slate-100'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                 }`}
               >
-                Chế độ Học
+                Học
               </button>
               <button
                 type="button"
                 onClick={() => setStudyMode('test')}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   studyMode === 'test'
-                    ? 'bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-white text-slate-900 shadow-xs dark:bg-gray-900 dark:text-slate-100'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                 }`}
               >
-                Chế độ Thi
+                Thi
               </button>
             </div>
           )}
@@ -608,26 +632,26 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                 hapticTap();
                 toggleAutoAdvance();
               }}
-              title="Tự động chuyển câu sau 700ms khi trả lời đúng"
-              className={`inline-flex h-10 items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold transition-colors active:scale-[0.98] ${
+              title="Tự động chuyển câu sau 700ms khi chọn đúng"
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 autoAdvance
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-300'
-                  : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'text-blue-600 hover:bg-slate-100 dark:text-blue-400 dark:hover:bg-slate-800'
+                  : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
               <Zap className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Tự chuyển</span>
+              <span className="hidden lg:inline">Tự chuyển</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={toggleKeywordMode}
-            title="Bật/tắt Highlight Từ Khóa (Phím H)"
-            className={`hidden h-10 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors lg:inline-flex ${
+            title="Highlight Từ khóa (H)"
+            className={`hidden items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors lg:inline-flex ${
               keywordMode
-                ? 'border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-200'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                ? 'text-amber-700 hover:bg-slate-100 dark:text-amber-300 dark:hover:bg-slate-800'
+                : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
@@ -637,24 +661,37 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
           <button
             type="button"
             onClick={() => setCheatSheetOpen(true)}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            title="Sổ tay so sánh nhanh"
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span className="hidden md:inline">Sổ tay</span>
+            <BookOpen className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Sổ tay</span>
           </button>
-        </div>
 
-        {/* Right: Timer + Submit + Matrix Toggle */}
-        <div className="flex items-center gap-2">
+          {/* Slide-over Question Drawer Trigger [ ☷ Câu X/N ] */}
+          {currentQ && (
+            <button
+              type="button"
+              onClick={() => setShowDrawer(true)}
+              title="Bảng câu hỏi (Phím G)"
+              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 lg:inline-flex dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>
+                Câu {currentQ.id}/{activeQuestions.length}
+              </span>
+            </button>
+          )}
+
           {mode === 'exam' && (
             <div
-              className={`flex h-10 items-center gap-1.5 rounded-xl border px-2.5 font-mono text-xs font-bold tabular-nums sm:px-3 sm:text-sm ${
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${
                 timeLeft < 120
-                  ? 'border-red-300 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-950/50'
-                  : 'border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                  ? 'bg-red-50 text-red-600 dark:bg-red-950/40'
+                  : 'text-slate-700 dark:text-slate-200'
               }`}
             >
-              <Clock className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <Clock className="h-3.5 w-3.5" />
               {formatTime(timeLeft)}
             </div>
           )}
@@ -663,268 +700,243 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
             <button
               type="button"
               onClick={() => setShowSubmitModal(true)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white transition-colors hover:bg-blue-700 active:scale-[0.98] sm:px-4 sm:text-sm"
+              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-3 w-3" />
               <span>Nộp bài</span>
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => setShowMatrix((v) => !v)}
-            title="Ẩn/hiện bảng câu hỏi"
-            className="hidden h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 lg:inline-flex dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-          >
-            {showMatrix ? (
-              <PanelRightClose className="h-4 w-4" />
-            ) : (
-              <PanelRightOpen className="h-4 w-4" />
-            )}
-          </button>
         </div>
       </header>
 
-      {/* 2. Main Split-Screen Workspace with Physics-Based Horizontal Swipe */}
+      {/* 2. Unified Zen Canvas */}
       {!currentQ ? (
         <div className="flex flex-1 items-center justify-center p-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-gray-900">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center dark:border-slate-800 dark:bg-gray-900">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
               Không có câu hỏi nào trong bộ lọc này.
             </p>
             <button
               onClick={onExit}
-              className="mt-4 min-h-[48px] rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white"
+              className="mt-4 min-h-[44px] rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white"
             >
               Quay về trang chủ
             </button>
           </div>
         </div>
       ) : (
-        <motion.div
-          key={currentQ.id}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
-          onDragEnd={(_, info) => {
-            if (info.offset.x < -60 || info.velocity.x < -400) {
-              if (safeIndex < activeQuestions.length - 1) {
-                hapticTap();
-                goNext();
+        <div className="flex flex-1 flex-col items-center justify-center p-3 pb-24 lg:overflow-hidden lg:p-6 lg:pb-6">
+          <motion.div
+            key={currentQ.id}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.18}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -60 || info.velocity.x < -400) {
+                if (safeIndex < activeQuestions.length - 1) {
+                  hapticTap();
+                  goNext();
+                }
+              } else if (info.offset.x > 60 || info.velocity.x > 400) {
+                if (safeIndex > 0) {
+                  hapticTap();
+                  goPrev();
+                }
               }
-            } else if (info.offset.x > 60 || info.velocity.x > 400) {
-              if (safeIndex > 0) {
-                hapticTap();
-                goPrev();
-              }
-            }
-          }}
-          initial={{ opacity: 0.92, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.14 }}
-          className="grid flex-1 grid-cols-1 gap-3 p-3 pb-24 md:p-4 lg:h-[calc(100vh-4rem)] lg:grid-cols-12 lg:gap-5 lg:overflow-hidden lg:p-5 lg:pb-5 [@media(min-width:768px)_and_(pointer:coarse)]:grid-cols-2"
-        >
-          {/* CỘT TRÁI: Context Zone (Question + Fixed Light Image) */}
-          <div className="lg:col-span-5 lg:h-full lg:overflow-y-auto">
-            <QuestionCard
-              question={currentQ}
-              displayIndex={safeIndex}
-              totalCount={activeQuestions.length}
-              isBookmarked={isBookmarked}
-              keywordMode={keywordMode}
-              onToggleBookmark={() => {
-                hapticTap();
-                toggleBookmark(currentQ.id);
-              }}
-              onEnableKeywords={() => {
-                if (!keywordMode) toggleKeywordMode();
-              }}
-              onOpenLightbox={(src) => setLightboxSrc(src)}
-            />
-          </div>
-
-          {/* CỘT GIỮA: Action Zone (48px+ Touch Options + Gap-3 + Long-Press Eliminate) */}
-          <div
-            className={`flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto dark:border-slate-800 dark:bg-gray-900 ${
-              showMatrix ? 'lg:col-span-4' : 'lg:col-span-7'
-            }`}
+            }}
+            initial={{ opacity: 0.94, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.14 }}
+            className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] lg:max-h-[calc(100vh-7.5rem)] dark:border-slate-800 dark:bg-gray-900"
           >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <span>Chọn đáp án (Giữ 0.4s để loại trừ)</span>
-                <span className="font-mono tabular-nums">
-                  {answeredCount}/{activeQuestions.length}
-                </span>
+            <div className="grid grid-cols-1 divide-y divide-slate-100 lg:grid-cols-12 lg:divide-x lg:divide-y-0 dark:divide-slate-800 [@media(min-width:768px)_and_(pointer:coarse)]:grid-cols-2 [@media(min-width:768px)_and_(pointer:coarse)]:divide-x [@media(min-width:768px)_and_(pointer:coarse)]:divide-y-0">
+              {/* NỬA TRÁI (~55% -> col-span-7): Context Zone */}
+              <div className="lg:col-span-7 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto">
+                <QuestionCard
+                  question={currentQ}
+                  isBookmarked={isBookmarked}
+                  keywordMode={keywordMode}
+                  onToggleBookmark={() => {
+                    hapticTap();
+                    toggleBookmark(currentQ.id);
+                  }}
+                  onEnableKeywords={() => {
+                    if (!keywordMode) toggleKeywordMode();
+                  }}
+                  onOpenLightbox={(src) => setLightboxSrc(src)}
+                />
               </div>
 
-              {/* Interactive Option Cards (min-h-[48px], gap-3 = 12px) */}
-              <div className="flex flex-col gap-3">
-                {currentQ.options.map((opt, idx) => {
-                  const isCorrectOpt = idx === currentQ.correctAnswer;
-                  const isChosen = idx === chosen;
-                  const isEliminated = eliminatedList.includes(idx);
+              {/* NỬA PHẢI (~45% -> col-span-5): Action Zone */}
+              <div className="flex flex-col justify-between p-5 sm:p-7 lg:col-span-5 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto">
+                <div className="space-y-3">
+                  {/* Refined Option Cards */}
+                  <div className="flex flex-col gap-3">
+                    {currentQ.options.map((opt, idx) => {
+                      const isCorrectOpt = idx === currentQ.correctAnswer;
+                      const isChosen = idx === chosen;
+                      const isEliminated = eliminatedList.includes(idx);
 
-                  let cardCls =
-                    'border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-gray-900 dark:hover:border-blue-500';
-                  let keycapCls =
-                    'bg-slate-100 border-slate-300 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200';
-                  let textCls = 'text-slate-700 dark:text-slate-200';
+                      let cardCls =
+                        'border-slate-200/90 bg-white hover:border-blue-500/60 hover:bg-blue-50/20 dark:border-slate-800 dark:bg-gray-900 dark:hover:border-blue-500/50';
+                      let keycapCls =
+                        'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+                      let textCls = 'text-slate-700 dark:text-slate-200';
 
-                  if (showFeedback) {
-                    if (isCorrectOpt) {
-                      cardCls = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40';
-                      keycapCls = 'bg-emerald-500 border-emerald-500 text-white';
-                      textCls = 'text-emerald-800 dark:text-emerald-200';
-                    } else if (isChosen) {
-                      cardCls = 'border-rose-500 bg-rose-50 dark:bg-rose-950/40';
-                      keycapCls = 'bg-rose-500 border-rose-500 text-white';
-                      textCls = 'text-rose-800 dark:text-rose-200';
-                    } else {
-                      cardCls =
-                        'border-slate-200/70 bg-slate-50/60 opacity-65 dark:border-slate-800 dark:bg-slate-950/40';
-                    }
-                  } else if (isChosen) {
-                    cardCls = 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40';
-                    keycapCls = 'bg-blue-600 border-blue-600 text-white';
-                  } else if (isEliminated) {
-                    cardCls =
-                      'border-slate-200 bg-slate-50 opacity-45 dark:border-slate-800 dark:bg-slate-950';
-                  }
+                      if (showFeedback) {
+                        if (isCorrectOpt) {
+                          cardCls =
+                            'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30';
+                          keycapCls = 'bg-emerald-500 text-white';
+                          textCls = 'text-emerald-950 dark:text-emerald-100';
+                        } else if (isChosen) {
+                          cardCls =
+                            'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30';
+                          keycapCls = 'bg-rose-500 text-white';
+                          textCls = 'text-rose-950 dark:text-rose-100';
+                        } else {
+                          cardCls =
+                            'border-slate-200/60 bg-slate-50/40 opacity-55 dark:border-slate-800 dark:bg-slate-950/30';
+                        }
+                      } else if (isChosen) {
+                        cardCls = 'border-blue-600 bg-blue-50/30 dark:bg-blue-950/30';
+                        keycapCls = 'bg-blue-600 text-white';
+                      } else if (isEliminated) {
+                        cardCls =
+                          'border-slate-200/70 bg-slate-50/60 opacity-45 dark:border-slate-800 dark:bg-slate-950';
+                      }
 
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={showFeedback}
-                      onTouchStart={() => {
-                        optionLongPressedRef.current = false;
-                        optionLongPressRef.current = window.setTimeout(() => {
-                          optionLongPressedRef.current = true;
-                          toggleEliminateOption(currentQ.id, idx);
-                        }, 400);
-                      }}
-                      onTouchEnd={() => {
-                        if (optionLongPressRef.current) {
-                          clearTimeout(optionLongPressRef.current);
-                          optionLongPressRef.current = null;
-                        }
-                      }}
-                      onTouchMove={() => {
-                        if (optionLongPressRef.current) {
-                          clearTimeout(optionLongPressRef.current);
-                          optionLongPressRef.current = null;
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        toggleEliminateOption(currentQ.id, idx);
-                      }}
-                      onClick={() => {
-                        if (optionLongPressedRef.current) {
-                          optionLongPressedRef.current = false;
-                          return;
-                        }
-                        handleSelectOption(idx);
-                      }}
-                      className={`flex min-h-[48px] w-full items-start gap-3.5 rounded-xl border-2 p-3.5 text-left transition-transform duration-75 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 ${cardCls}`}
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          disabled={showFeedback}
+                          onTouchStart={() => {
+                            optionLongPressedRef.current = false;
+                            optionLongPressRef.current = window.setTimeout(() => {
+                              optionLongPressedRef.current = true;
+                              toggleEliminateOption(currentQ.id, idx);
+                            }, 400);
+                          }}
+                          onTouchEnd={() => {
+                            if (optionLongPressRef.current) {
+                              clearTimeout(optionLongPressRef.current);
+                              optionLongPressRef.current = null;
+                            }
+                          }}
+                          onTouchMove={() => {
+                            if (optionLongPressRef.current) {
+                              clearTimeout(optionLongPressRef.current);
+                              optionLongPressRef.current = null;
+                            }
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            toggleEliminateOption(currentQ.id, idx);
+                          }}
+                          onClick={() => {
+                            if (optionLongPressedRef.current) {
+                              optionLongPressedRef.current = false;
+                              return;
+                            }
+                            handleSelectOption(idx);
+                          }}
+                          className={`flex min-h-[48px] w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-all duration-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 ${cardCls}`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-semibold ${keycapCls}`}
+                          >
+                            {showFeedback && isCorrectOpt ? (
+                              <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                            ) : showFeedback && isChosen && !isCorrectOpt ? (
+                              <X className="h-3.5 w-3.5 stroke-[2.5]" />
+                            ) : (
+                              idx + 1
+                            )}
+                          </span>
+                          <span
+                            className={`flex-1 text-[15px] font-medium leading-normal ${textCls} ${
+                              isEliminated && !showFeedback ? 'line-through' : ''
+                            }`}
+                          >
+                            {opt}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Inline Smart Explanation Callout */}
+                  {showFeedback && explanation && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="hidden space-y-1 rounded-r-xl border-l-4 border-blue-600 bg-blue-50/70 p-3.5 text-xs text-slate-700 lg:block dark:bg-blue-950/35 dark:text-slate-200"
                     >
-                      <span
-                        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-bold ${keycapCls}`}
-                      >
-                        {idx + 1}
+                      <div>
+                        <strong className="text-blue-700 dark:text-blue-300">
+                          💡 Mẹo nhớ 3 giây:
+                        </strong>{' '}
+                        {explanation.quickTip}
+                      </div>
+                      <div className="leading-relaxed text-slate-600 dark:text-slate-300">
+                        <strong>📖 Căn cứ luật:</strong> {explanation.legalBasis}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Mobile Floating Explanation Pill */}
+                  {showFeedback && explanation && (
+                    <button
+                      type="button"
+                      onClick={() => setShowExplanationSheet(true)}
+                      className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-2.5 text-left text-xs font-semibold text-blue-700 lg:hidden dark:border-blue-500/40 dark:bg-blue-950/40 dark:text-blue-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4" />
+                        Xem giải thích & Mẹo nhớ
                       </span>
-                      <span
-                        className={`flex-1 text-base font-medium leading-normal ${textCls} ${
-                          isEliminated && !showFeedback ? 'line-through' : ''
-                        }`}
-                      >
-                        <HighlightedText
-                          text={opt}
-                          extraKeywords={currentQ.keywords}
-                          enabled={keywordMode}
-                        />
-                      </span>
-                      {showFeedback && isCorrectOpt && (
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-                      )}
-                      {showFeedback && isChosen && !isCorrectOpt && (
-                        <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
-                      )}
+                      <ChevronUp className="h-4 w-4" />
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+
+                {/* Desktop Prev / Next Navigation right below options */}
+                <div className="mt-6 hidden items-center justify-between gap-3 border-t border-slate-100 pt-4 lg:flex dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    disabled={safeIndex === 0}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Câu trước
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={safeIndex >= activeQuestions.length - 1}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
+                  >
+                    Câu tiếp
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-
-              {/* Desktop Inline Smart Explanation Callout */}
-              {showFeedback && explanation && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 hidden space-y-1.5 rounded-r-xl border-l-4 border-blue-600 bg-blue-50/80 p-4 text-sm text-slate-700 lg:block dark:bg-blue-950/40 dark:text-slate-200"
-                >
-                  <div>
-                    <strong className="text-blue-700 dark:text-blue-300">
-                      💡 Mẹo nhớ 3 giây:
-                    </strong>{' '}
-                    {explanation.quickTip}
-                  </div>
-                  <div className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                    <strong>📖 Căn cứ luật:</strong> {explanation.legalBasis}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Mobile Floating Explanation Pill (prevents layout shift!) */}
-              {showFeedback && explanation && (
-                <button
-                  type="button"
-                  onClick={() => setShowExplanationSheet(true)}
-                  className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-left text-xs font-bold text-blue-700 lg:hidden dark:border-blue-500/40 dark:bg-blue-950/40 dark:text-blue-300"
-                >
-                  <span className="flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" />
-                    Xem giải thích & Mẹo nhớ 3 giây
-                  </span>
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-              )}
             </div>
+          </motion.div>
 
-            {/* Desktop Shortcut Legend */}
-            <div className="mt-4 hidden items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-400 lg:flex dark:border-slate-800">
-              <span>
-                <kbd className="rounded border border-slate-200 px-1 font-mono dark:border-slate-700">1-4</kbd> Chọn •{' '}
-                <kbd className="rounded border border-slate-200 px-1 font-mono dark:border-slate-700">←/→</kbd> Chuyển •{' '}
-                <kbd className="rounded border border-slate-200 px-1 font-mono dark:border-slate-700">H</kbd> Từ khóa •{' '}
-                <kbd className="rounded border border-slate-200 px-1 font-mono dark:border-slate-700">Z</kbd> Zoom •{' '}
-                <kbd className="rounded border border-slate-200 px-1 font-mono dark:border-slate-700">B</kbd> Lưu
-              </span>
-            </div>
-          </div>
-
-          {/* CỘT PHẢI: Desktop Question Navigator Matrix */}
-          {showMatrix && (
-            <div className="hidden lg:col-span-3 lg:block lg:h-full lg:overflow-hidden">
-              <QuestionMatrix
-                questions={activeQuestions}
-                currentIndex={safeIndex}
-                answers={answers}
-                bookmarks={bookmarks}
-                isExamMode={studyMode === 'test'}
-                onSelectIndex={(idx) => setCurrentIndex(idx)}
-                onPrev={goPrev}
-                onNext={goNext}
-              />
-            </div>
-          )}
-        </motion.div>
+          {/* Subtle Centered Shortcut Hint */}
+          <p className="mt-3 hidden text-center text-[11px] text-slate-400 lg:block">
+            1-4 Chọn • ←/→ Chuyển • H Từ khóa • Z Phóng to • B Lưu • G Bảng câu hỏi
+          </p>
+        </div>
       )}
 
-      {/* 5. Ergonomic Floating Thumb-Bar (Mobile & Touch < 1024px) */}
+      {/* Ergonomic Floating Thumb-Bar (Mobile & Touch < 1024px) */}
       {currentQ && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden dark:border-slate-800 dark:bg-gray-900/95">
           <div className="flex h-16 items-center justify-between gap-2 px-3">
-            {/* [ ◀ ] Previous */}
             <button
               type="button"
               onClick={() => {
@@ -938,7 +950,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               <ChevronLeft className="h-5 w-5" />
             </button>
 
-            {/* Center [ Câu X/Y • Mở danh sách ▲ ] (Tap or Swipe Up) */}
             <motion.button
               type="button"
               drag="y"
@@ -962,14 +973,13 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               <ChevronUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </motion.button>
 
-            {/* [ ★ ] Bookmark */}
             <button
               type="button"
               onClick={() => {
                 hapticTap();
                 toggleBookmark(currentQ.id);
               }}
-              aria-label="Đánh dấu câu hỏi"
+              aria-label="Đánh dấu"
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-75 active:scale-[0.95] ${
                 isBookmarked
                   ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400'
@@ -979,14 +989,13 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-amber-500' : ''}`} />
             </button>
 
-            {/* [ 💡 ] Highlight Keywords */}
             <button
               type="button"
               onClick={() => {
                 hapticTap();
                 toggleKeywordMode();
               }}
-              aria-label="Bật tắt từ khóa"
+              aria-label="Từ khóa"
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-75 active:scale-[0.95] ${
                 keywordMode
                   ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
@@ -996,7 +1005,6 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
               <Lightbulb className="h-5 w-5" />
             </button>
 
-            {/* [ ▶ ] Next */}
             <button
               type="button"
               onClick={() => {
@@ -1013,7 +1021,55 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
         </div>
       )}
 
-      {/* Bottom Sheet 1: 600-Question Matrix (50% / 90% Snap Points) */}
+      {/* Desktop Slide-Over Drawer (Hidden by default, opens with [ ☷ Câu X/N ] or key G) */}
+      <AnimatePresence>
+        {showDrawer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 hidden justify-end bg-slate-950/30 backdrop-blur-[1px] lg:flex"
+            onClick={() => setShowDrawer(false)}
+          >
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-full w-80 flex-col border-l border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-gray-900"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Danh sách câu ({activeQuestions.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowDrawer(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <QuestionMatrix
+                  questions={activeQuestions}
+                  currentIndex={safeIndex}
+                  answers={answers}
+                  bookmarks={bookmarks}
+                  isExamMode={studyMode === 'test'}
+                  onSelectIndex={(idx) => {
+                    setCurrentIndex(idx);
+                    setShowDrawer(false);
+                  }}
+                />
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Bottom Sheet 1: Question Matrix */}
       <BottomSheet
         open={showMatrixSheet}
         title={`Bảng câu hỏi (${activeQuestions.length} câu)`}
@@ -1032,12 +1088,10 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
             setCurrentIndex(idx);
             setShowMatrixSheet(false);
           }}
-          onPrev={goPrev}
-          onNext={goNext}
         />
       </BottomSheet>
 
-      {/* Bottom Sheet 2: Smart Explanation & Mẹo nhớ */}
+      {/* Mobile Bottom Sheet 2: Explanation & Mẹo nhớ */}
       <BottomSheet
         open={showExplanationSheet}
         title="Giải thích & Mẹo ghi nhớ"
@@ -1119,14 +1173,14 @@ export const QuizWorkspace: React.FC<QuizWorkspaceProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowSubmitModal(false)}
-                  className="min-h-[48px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="min-h-[44px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   Tiếp tục làm bài
                 </button>
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="min-h-[48px] rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  className="min-h-[44px] rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
                 >
                   Nộp bài ngay
                 </button>
