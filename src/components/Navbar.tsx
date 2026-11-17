@@ -33,6 +33,12 @@ export const Navbar: React.FC = () => {
             <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
               GPLX 600
             </span>
+            <span
+              title={`Phiên bản commit #${__APP_COMMIT__}`}
+              className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            >
+              #{__APP_COMMIT__}
+            </span>
           </button>
 
           {/* Center: 4 Official Tabs with fixed-height bottom underline */}

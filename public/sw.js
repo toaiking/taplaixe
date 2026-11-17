@@ -55,10 +55,15 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// 2. Handle messages from client (delayed background triggers + schedule sync)
+// 2. Handle messages from client (delayed background triggers + schedule sync + skipWaiting)
 self.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || !data.type) return;
+
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
 
   if (data.type === 'SCHEDULE_DELAYED_SW') {
     const delayMs = Math.max(0, Math.min(Number(data.delayMs) || 0, 300000));
@@ -152,7 +157,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/api/') || url.pathname === '/version.json') return;
 
   // Always bypass old cache for icons, favicon, and manifest (network-first with cache reload)
   if (

@@ -7,6 +7,7 @@ import { ExamHubView } from './components/ExamHubView';
 import { ImageLightbox } from './components/ImageLightbox';
 import { Navbar } from './components/Navbar';
 import { QuizWorkspace } from './components/QuizWorkspace';
+import { UpdateModal } from './components/UpdateModal';
 import { useAppStore } from './store/useAppStore';
 import { Question } from './types/question';
 import {
@@ -31,6 +32,69 @@ export function App() {
   } = useAppStore();
   const [globalLightboxSrc, setGlobalLightboxSrc] = useState<string | null>(null);
   const [reminderBanner, setReminderBanner] = useState(false);
+  const [latestCommit, setLatestCommit] = useState<string | null>(null);
+  const [dismissedCommit, setDismissedCommit] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Check for new commit deployments via /version.json
+  const checkForAppUpdate = useCallback(async () => {
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { commit?: string };
+      if (
+        data?.commit &&
+        __APP_COMMIT__ !== 'dev' &&
+        data.commit !== __APP_COMMIT__ &&
+        data.commit !== dismissedCommit
+      ) {
+        setLatestCommit(data.commit);
+      }
+    } catch {
+      // Ignore offline/network errors
+    }
+  }, [dismissedCommit]);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(checkForAppUpdate, 1500);
+    const intervalId = window.setInterval(checkForAppUpdate, 60000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkForAppUpdate();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', checkForAppUpdate);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', checkForAppUpdate);
+    };
+  }, [checkForAppUpdate]);
+
+  const handleConfirmUpdate = useCallback(async () => {
+    setIsUpdating(true);
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg?.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        await reg?.update().catch(() => {});
+      }
+    } catch {
+      // Proceed to reload anyway
+    }
+    window.location.reload();
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -188,6 +252,18 @@ export function App() {
       <ImageLightbox
         src={globalLightboxSrc}
         onClose={() => setGlobalLightboxSrc(null)}
+      />
+
+      <UpdateModal
+        open={Boolean(latestCommit && latestCommit !== dismissedCommit)}
+        currentCommit={__APP_COMMIT__}
+        latestCommit={latestCommit || ''}
+        isUpdating={isUpdating}
+        onConfirm={handleConfirmUpdate}
+        onDismiss={() => {
+          if (latestCommit) setDismissedCommit(latestCommit);
+          setLatestCommit(null);
+        }}
       />
     </div>
   );
