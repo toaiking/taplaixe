@@ -25,6 +25,7 @@ function isYesterday(prevDateStr: string, todayStr: string): boolean {
 interface AppState {
   darkMode: boolean;
   keywordMode: boolean;
+  autoAdvance: boolean;
   activeScreen: ScreenId;
   practicePreset: PracticePreset;
   srs: Record<number, QuestionProgress>;
@@ -36,6 +37,7 @@ interface AppState {
 
   toggleDarkMode: () => void;
   toggleKeywordMode: () => void;
+  toggleAutoAdvance: () => void;
   setActiveScreen: (screen: ScreenId) => void;
   setCheatSheetOpen: (open: boolean) => void;
   navigateToPractice: (preset: PracticePreset) => void;
@@ -58,6 +60,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       darkMode: false,
       keywordMode: true,
+      autoAdvance: true,
       activeScreen: 'dashboard',
       practicePreset: DEFAULT_PRESET,
       srs: {},
@@ -70,6 +73,8 @@ export const useAppStore = create<AppState>()(
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
 
       toggleKeywordMode: () => set((state) => ({ keywordMode: !state.keywordMode })),
+
+      toggleAutoAdvance: () => set((state) => ({ autoAdvance: !state.autoAdvance })),
 
       setActiveScreen: (screen) => set({ activeScreen: screen }),
 
@@ -173,6 +178,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         darkMode: state.darkMode,
         keywordMode: state.keywordMode,
+        autoAdvance: state.autoAdvance,
         srs: state.srs,
         bookmarks: state.bookmarks,
         examHistory: state.examHistory,

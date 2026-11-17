@@ -10,6 +10,7 @@ interface QuestionMatrixProps {
   answers: Record<number, number>;
   bookmarks: number[];
   isExamMode: boolean;
+  touchMode?: boolean;
   onSelectIndex: (idx: number) => void;
   onPrev: () => void;
   onNext: () => void;
@@ -21,6 +22,7 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
   answers,
   bookmarks,
   isExamMode,
+  touchMode = false,
   onSelectIndex,
   onPrev,
   onNext,
@@ -75,8 +77,14 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
           })}
         </div>
 
-        {/* 5-col Matrix */}
-        <div className="grid max-h-[calc(100vh-17rem)] grid-cols-5 gap-2 overflow-y-auto pr-1 content-start">
+        {/* Matrix Grid */}
+        <div
+          className={`grid overflow-y-auto pr-1 content-start ${
+            touchMode
+              ? 'grid-cols-6 gap-2.5'
+              : 'max-h-[calc(100vh-17rem)] grid-cols-5 gap-2'
+          }`}
+        >
           {visibleItems.map(({ q, idx }) => {
             const isCurrent = idx === currentIndex;
             const userAns = answers[q.id];
@@ -104,7 +112,11 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
                 key={q.id}
                 type="button"
                 onClick={() => onSelectIndex(idx)}
-                className={`relative flex h-10 items-center justify-center rounded-lg border font-mono text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 ${cellCls} ${
+                className={`relative flex items-center justify-center border font-mono font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 ${
+                  touchMode
+                    ? 'h-12 rounded-xl text-sm font-bold active:scale-[0.96]'
+                    : 'h-10 rounded-lg text-xs'
+                } ${cellCls} ${
                   isCurrent
                     ? 'ring-2 ring-blue-600 ring-offset-1 dark:ring-offset-gray-900'
                     : ''
@@ -129,8 +141,9 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
         </div>
       </div>
 
-      {/* Footer Prev / Next */}
-      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+      {/* Footer Prev / Next (Desktop) */}
+      {!touchMode && (
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
         <button
           type="button"
           onClick={onPrev}
@@ -150,6 +163,7 @@ export const QuestionMatrix: React.FC<QuestionMatrixProps> = ({
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
+      )}
     </div>
   );
 };
