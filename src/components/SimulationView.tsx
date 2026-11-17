@@ -1,19 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Award,
   BookOpen,
+  Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
   Eye,
   EyeOff,
   Film,
+  LayoutGrid,
   Play,
   RotateCcw,
   Search,
   Shuffle,
   Sparkles,
+  X,
   XCircle,
 } from 'lucide-react';
 import {
@@ -27,6 +30,7 @@ import { hapticError, hapticSuccess, hapticTap } from '../utils/haptics';
 import { SegmentedControl } from './SegmentedControl';
 
 type SimTab = 'study' | 'exam' | 'guide';
+type PartKey = 'part1' | 'part2' | 'part3' | 'part4';
 
 interface SimPartAnswers {
   part1?: 'A' | 'B' | 'C';
@@ -45,30 +49,42 @@ const SIM_HISTORY_KEY = 'gplx_sim_2026_exam_history';
 const SIM_MASTERED_KEY = 'gplx_sim_2026_mastered';
 const SIM_LAST_ID_KEY = 'gplx_sim_2026_last_id';
 
+const PART_KEYS: PartKey[] = ['part1', 'part2', 'part3', 'part4'];
+
 const PART_META: {
-  key: keyof SimPartAnswers;
+  key: PartKey;
+  shortLabel: string;
   badge: string;
   title: string;
+  summaryField: 'name' | 'indirect' | 'direct' | 'action';
 }[] = [
   {
     key: 'part1',
-    badge: 'Phần 1 • 0,25đ',
-    title: '1. Tình huống giao thông trong video là gì?',
+    shortLabel: '1. Tên TH',
+    badge: '0,25đ',
+    title: 'Câu 1: Tình huống giao thông trong video là gì?',
+    summaryField: 'name',
   },
   {
     key: 'part2',
-    badge: 'Phần 2 • 0,25đ',
-    title: '2. Dấu hiệu nhận biết GIÁN TIẾP của tình huống này là gì?',
+    shortLabel: '2. Gián tiếp',
+    badge: '0,25đ',
+    title: 'Câu 2: Dấu hiệu nhận biết GIÁN TIẾP từ xa là gì?',
+    summaryField: 'indirect',
   },
   {
     key: 'part3',
-    badge: 'Phần 3 • 0,25đ',
-    title: '3. Dấu hiệu nhận biết TRỰC TIẾP của tình huống này là gì?',
+    shortLabel: '3. Trực tiếp',
+    badge: '0,25đ',
+    title: 'Câu 3: Dấu hiệu nhận biết TRỰC TIẾP khi nguy cơ xuất hiện?',
+    summaryField: 'direct',
   },
   {
     key: 'part4',
-    badge: 'Phần 4 • 0,25đ',
-    title: '4. Phương án xử lý như thế nào để đảm bảo an toàn?',
+    shortLabel: '4. Xử lý',
+    badge: '0,25đ',
+    title: 'Câu 4: Phương án xử lý như thế nào để đảm bảo an toàn?',
+    summaryField: 'action',
   },
 ];
 
@@ -94,7 +110,9 @@ export const SimulationView: React.FC = () => {
   const [chapterFilter, setChapterFilter] = useState<number>(0); // 0 = all
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [studyAnswers, setStudyAnswers] = useState<Record<number, SimPartAnswers>>({});
-  const [showSummaryCard, setShowSummaryCard] = useState<boolean>(true);
+  const [activeStudyPart, setActiveStudyPart] = useState<PartKey>('part1');
+  const [showHint, setShowHint] = useState<boolean>(false);
+  const [showMobilePicker, setShowMobilePicker] = useState<boolean>(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [masteredIds, setMasteredIds] = useState<number[]>(() => {
     try {
@@ -120,21 +138,36 @@ export const SimulationView: React.FC = () => {
     situations: SimSituation[];
   } | null>(null);
   const [examIdx, setExamIdx] = useState<number>(0);
+  const [activeExamPart, setActiveExamPart] = useState<PartKey>('part1');
   const [examAnswers, setExamAnswers] = useState<Record<number, SimPartAnswers>>({});
   const [examTimeLeft, setExamTimeLeft] = useState<number>(15 * 60);
   const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
 
   const studyVideoRef = useRef<HTMLVideoElement | null>(null);
   const examVideoRef = useRef<HTMLVideoElement | null>(null);
+  const stepAdvanceTimerRef = useRef<number | null>(null);
 
-  // Save last viewed situation in study mode
+  useEffect(() => {
+    return () => {
+      if (stepAdvanceTimerRef.current) {
+        window.clearTimeout(stepAdvanceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Save last viewed situation in study mode & reset active part to first unanswered
   useEffect(() => {
     try {
       localStorage.setItem(SIM_LAST_ID_KEY, String(selectedId));
     } catch {
       // Ignore
     }
+    setActiveStudyPart('part1');
   }, [selectedId]);
+
+  useEffect(() => {
+    setActiveExamPart('part1');
+  }, [examIdx]);
 
   const filteredSituations = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -188,7 +221,7 @@ export const SimulationView: React.FC = () => {
 
   const handleSelectStudyAnswer = (
     sit: SimSituation,
-    partKey: keyof SimPartAnswers,
+    partKey: PartKey,
     opt: SimOption
   ) => {
     if (opt.isCorrect) {
@@ -201,7 +234,6 @@ export const SimulationView: React.FC = () => {
       const current = { ...(prev[sit.id] || {}), [partKey]: opt.label };
       const next = { ...prev, [sit.id]: current };
 
-      // Check if all 4 parts are answered correctly
       const p1Ok = sit.parts.part1.find((o) => o.label === current.part1)?.isCorrect;
       const p2Ok = sit.parts.part2.find((o) => o.label === current.part2)?.isCorrect;
       const p3Ok = sit.parts.part3.find((o) => o.label === current.part3)?.isCorrect;
@@ -218,6 +250,39 @@ export const SimulationView: React.FC = () => {
       }
       return next;
     });
+
+    // If correct, auto-advance to the next part after 420ms so user doesn't have to scroll or switch tabs manually
+    if (opt.isCorrect) {
+      const idx = PART_KEYS.indexOf(partKey);
+      if (idx >= 0 && idx < PART_KEYS.length - 1) {
+        if (stepAdvanceTimerRef.current) window.clearTimeout(stepAdvanceTimerRef.current);
+        stepAdvanceTimerRef.current = window.setTimeout(() => {
+          setActiveStudyPart(PART_KEYS[idx + 1]);
+        }, 420);
+      }
+    }
+  };
+
+  const handleSelectExamAnswer = (partKey: PartKey, label: 'A' | 'B' | 'C') => {
+    if (examSubmitted) return;
+    hapticTap();
+
+    setExamAnswers((prev) => ({
+      ...prev,
+      [examIdx]: {
+        ...(prev[examIdx] || {}),
+        [partKey]: label,
+      },
+    }));
+
+    // Auto-advance to the next part (1 -> 2 -> 3 -> 4) in 220ms
+    const idx = PART_KEYS.indexOf(partKey);
+    if (idx >= 0 && idx < PART_KEYS.length - 1) {
+      if (stepAdvanceTimerRef.current) window.clearTimeout(stepAdvanceTimerRef.current);
+      stepAdvanceTimerRef.current = window.setTimeout(() => {
+        setActiveExamPart(PART_KEYS[idx + 1]);
+      }, 220);
+    }
   };
 
   const startExamSet = (maDe: number, customIds?: number[], customTitle?: string) => {
@@ -229,10 +294,11 @@ export const SimulationView: React.FC = () => {
 
     setActiveExam({
       maDe,
-      title: customTitle ?? `Đề kiểm tra mô phỏng số ${maDe}`,
+      title: customTitle ?? `Đề mô phỏng số ${maDe}`,
       situations: sits,
     });
     setExamIdx(0);
+    setActiveExamPart('part1');
     setExamAnswers({});
     setExamTimeLeft(15 * 60);
     setExamSubmitted(false);
@@ -245,7 +311,7 @@ export const SimulationView: React.FC = () => {
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
     const picked = copy.slice(0, 10).sort((a, b) => a.id - b.id);
-    startExamSet(0, picked.map((s) => s.id), 'Đề mô phỏng ngẫu nhiên (10 tình huống)');
+    startExamSet(0, picked.map((s) => s.id), 'Đề ngẫu nhiên (10 TH)');
   };
 
   const examScoreSummary = useMemo(() => {
@@ -283,7 +349,9 @@ export const SimulationView: React.FC = () => {
 
     if (activeExam.maDe > 0) {
       const prev = examHistory[activeExam.maDe];
-      const bestScore = prev ? Math.max(prev.score, examScoreSummary.totalScore) : examScoreSummary.totalScore;
+      const bestScore = prev
+        ? Math.max(prev.score, examScoreSummary.totalScore)
+        : examScoreSummary.totalScore;
       const updated: Record<number, SimExamRecord> = {
         ...examHistory,
         [activeExam.maDe]: {
@@ -301,36 +369,41 @@ export const SimulationView: React.FC = () => {
     }
   };
 
-  // Render Active Exam Workspace
+  // ============================================================================
+  // COMPACT ACTIVE EXAM WORKSPACE (Fits on 1 mobile screen without scrolling!)
+  // ============================================================================
   if (tab === 'exam' && activeExam) {
     const currentSit = activeExam.situations[examIdx] ?? activeExam.situations[0];
     const currentAns = examAnswers[examIdx] || {};
+    const activeMeta = PART_META.find((m) => m.key === activeExamPart) ?? PART_META[0];
+    const activeOpts = currentSit.parts[activeExamPart];
+    const chosenForActivePart = currentAns[activeExamPart];
+    const answeredCountInSit =
+      (currentAns.part1 ? 1 : 0) +
+      (currentAns.part2 ? 1 : 0) +
+      (currentAns.part3 ? 1 : 0) +
+      (currentAns.part4 ? 1 : 0);
 
     return (
-      <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-6">
-        {/* Top Exam Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-5 py-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-3">
+      <div className="mx-auto w-full max-w-6xl space-y-2.5 px-3 py-2.5 sm:space-y-4 sm:px-6 sm:py-5">
+        {/* 1. Ultra-compact Top Exam Header */}
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={() => setActiveExam(null)}
-              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
             >
-              ← Thoát đề
+              ← Thoát
             </button>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 sm:text-base dark:text-slate-100">
-                {activeExam.title}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                10 tình huống • Thang điểm 10 (0,25đ / ý) • Đạt ≥ 7,0 điểm
-              </p>
-            </div>
+            <span className="truncate text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
+              {activeExam.title}
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             <div
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 font-mono text-xs font-bold ${
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 font-mono text-xs font-bold ${
                 examTimeLeft <= 60 && !examSubmitted
                   ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400'
                   : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
@@ -344,9 +417,9 @@ export const SimulationView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSubmitExam}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
               >
-                Chấm điểm ngay
+                Nộp bài
               </button>
             ) : (
               <button
@@ -358,57 +431,49 @@ export const SimulationView: React.FC = () => {
                     activeExam.title
                   )
                 }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Làm lại đề này
+                <RotateCcw className="h-3 w-3" />
+                Thi lại
               </button>
             )}
           </div>
         </div>
 
-        {/* Result Banner when submitted */}
+        {/* Compact Score Result Strip when submitted */}
         {examSubmitted && examScoreSummary && (
           <div
-            className={`rounded-2xl border p-5 ${
+            className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-xs ${
               examScoreSummary.passed
-                ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-700/60 dark:bg-emerald-950/30'
-                : 'border-rose-300 bg-rose-50/70 dark:border-rose-700/60 dark:bg-rose-950/30'
+                ? 'border-emerald-300 bg-emerald-50/80 text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200'
+                : 'border-rose-300 bg-rose-50/80 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-200'
             }`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {examScoreSummary.passed ? (
-                  <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                ) : (
-                  <XCircle className="h-8 w-8 text-rose-600 dark:text-rose-400" />
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">
-                      {examScoreSummary.totalScore.toFixed(2)} / 10,0 điểm
-                    </span>
-                    <span
-                      className={`rounded-md px-2.5 py-0.5 text-xs font-bold ${
-                        examScoreSummary.passed
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-rose-600 text-white'
-                      }`}
-                    >
-                      {examScoreSummary.passed ? 'ĐẠT YÊU CẦU (≥ 7,0)' : 'CHƯA ĐẠT (< 7,0)'}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
-                    Bấm vào từng ô Tình huống 1–10 bên dưới để xem lại đáp án đúng và giải thích.
-                  </p>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              {examScoreSummary.passed ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              ) : (
+                <XCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              )}
+              <span className="font-mono text-sm font-bold">
+                {examScoreSummary.totalScore.toFixed(2)} / 10,0đ
+              </span>
+              <span
+                className={`rounded px-2 py-0.5 text-[10px] font-bold text-white ${
+                  examScoreSummary.passed ? 'bg-emerald-600' : 'bg-rose-600'
+                }`}
+              >
+                {examScoreSummary.passed ? 'ĐẠT (≥ 7,0)' : 'CHƯA ĐẠT'}
+              </span>
             </div>
+            <span className="text-[11px] opacity-85">
+              Chạm số 1–10 hoặc Phần 1–4 để xem đáp án đúng
+            </span>
           </div>
         )}
 
-        {/* 10 Situation Pills */}
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+        {/* 2. Single-row Horizontal Strip for 10 Situations (No multi-row clutter) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
           {activeExam.situations.map((sit, idx) => {
             const ans = examAnswers[idx] || {};
             const count =
@@ -420,7 +485,7 @@ export const SimulationView: React.FC = () => {
             const sitScore = examScoreSummary?.perSituation[idx] ?? 0;
 
             let cls =
-              'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300';
+              'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300';
             if (examSubmitted) {
               cls =
                 sitScore >= 0.75
@@ -437,7 +502,8 @@ export const SimulationView: React.FC = () => {
             }
 
             if (isCurrent) {
-              cls += ' ring-2 ring-slate-900 dark:ring-indigo-400 font-bold';
+              cls =
+                'border-slate-900 bg-slate-900 text-white font-bold dark:border-indigo-500 dark:bg-indigo-600';
             }
 
             return (
@@ -445,29 +511,29 @@ export const SimulationView: React.FC = () => {
                 key={sit.id}
                 type="button"
                 onClick={() => setExamIdx(idx)}
-                className={`flex flex-col items-center justify-center rounded-xl border py-2 text-xs transition-all ${cls}`}
+                className={`flex min-w-[54px] flex-1 items-center justify-between gap-1 rounded-lg border px-2 py-1.5 font-mono text-[11px] transition-all ${cls}`}
               >
-                <span className="font-mono">Câu {idx + 1}</span>
+                <span>#{idx + 1}</span>
                 <span className="text-[10px] opacity-80">
-                  {examSubmitted ? `${sitScore.toFixed(2)}đ` : `${count}/4 ý`}
+                  {examSubmitted ? `${sitScore}đ` : `${count}/4`}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* Main Split Exam Workspace */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        {/* 3. Main Split Workspace: Video + Step-Tabbed Question Panel */}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-5">
           {/* Left: Video Player */}
-          <div className="space-y-4 lg:col-span-6">
-            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-950 shadow-sm dark:border-slate-800">
-              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2.5 text-xs text-slate-200">
+          <div className="lg:col-span-6">
+            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-950 shadow-xs dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-3.5 py-1.5 text-[11px] text-slate-300">
                 <span className="font-mono font-semibold text-indigo-400">
-                  Tình huống {examIdx + 1}/10 (Mã TH #{currentSit.id})
+                  Tình huống {examIdx + 1}/10 (TH #{currentSit.id})
                 </span>
-                <span>Chương {currentSit.chapter}</span>
+                <span>Đã chọn {answeredCountInSit}/4 ý</span>
               </div>
-              <div className="aspect-video w-full bg-black">
+              <div className="aspect-video max-h-[34vh] w-full bg-black sm:max-h-none">
                 <video
                   ref={examVideoRef}
                   key={currentSit.videoUrl}
@@ -479,94 +545,144 @@ export const SimulationView: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center justify-between gap-3">
+          {/* Right: 4-Step Tabbed Question Card (Zero Scroll on Mobile!) */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs sm:p-5 lg:col-span-6 dark:border-slate-800 dark:bg-slate-900">
+            <div>
+              {/* 4-Part Step Selector Bar */}
+              <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/90">
+                {PART_META.map((pm) => {
+                  const isCurrentPart = activeExamPart === pm.key;
+                  const ansLabel = currentAns[pm.key];
+                  const isCorrectAfterSubmit =
+                    examSubmitted &&
+                    currentSit.parts[pm.key].find((o) => o.label === ansLabel)?.isCorrect;
+
+                  return (
+                    <button
+                      key={pm.key}
+                      type="button"
+                      onClick={() => setActiveExamPart(pm.key)}
+                      className={`flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-semibold transition-all ${
+                        isCurrentPart
+                          ? 'bg-white text-slate-900 shadow-2xs dark:bg-slate-900 dark:text-white'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+                      }`}
+                    >
+                      <span className="truncate">{pm.shortLabel}</span>
+                      {examSubmitted ? (
+                        isCorrectAfterSubmit ? (
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                        ) : (
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                        )
+                      ) : ansLabel ? (
+                        <span className="font-mono text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                          ({ansLabel})
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Step Question & 3 Options */}
+              <div className="mt-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
+                    {activeMeta.title}
+                  </span>
+                  <span className="shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+                    {activeMeta.badge}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {activeOpts.map((opt) => {
+                    const isSelected = chosenForActivePart === opt.label;
+                    let optCls =
+                      'border-slate-200/80 bg-slate-50/70 text-slate-800 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200';
+
+                    if (examSubmitted) {
+                      if (opt.isCorrect) {
+                        optCls =
+                          'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold dark:border-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-200';
+                      } else if (isSelected && !opt.isCorrect) {
+                        optCls =
+                          'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-600 dark:bg-rose-950/50 dark:text-rose-200';
+                      }
+                    } else if (isSelected) {
+                      optCls =
+                        'border-slate-900 bg-slate-900 text-white font-semibold dark:border-indigo-500 dark:bg-indigo-600';
+                    }
+
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        disabled={examSubmitted}
+                        onClick={() => handleSelectExamAnswer(activeExamPart, opt.label)}
+                        className={`flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs transition-colors sm:text-sm ${optCls}`}
+                      >
+                        <span className="font-mono font-bold">{opt.label}.</span>
+                        <span className="flex-1 leading-snug">{opt.text}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Quick Navigation inside Card */}
+            <div className="mt-3.5 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-800">
               <button
                 type="button"
                 disabled={examIdx === 0}
                 onClick={() => setExamIdx((i) => Math.max(0, i - 1))}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
               >
-                <ChevronLeft className="h-4 w-4" /> Tình huống trước
+                <ChevronLeft className="h-4 w-4" /> Câu trước
               </button>
-              <button
-                type="button"
-                disabled={examIdx >= activeExam.situations.length - 1}
-                onClick={() =>
-                  setExamIdx((i) => Math.min(activeExam.situations.length - 1, i + 1))
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
-              >
-                Tình huống tiếp <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
 
-          {/* Right: 4 Multiple-Choice Questions (0.25đ each) */}
-          <div className="space-y-3.5 lg:col-span-6">
-            {PART_META.map((pm) => {
-              const opts = currentSit.parts[pm.key];
-              const chosenLabel = currentAns[pm.key];
+              <div className="flex items-center gap-1">
+                {PART_KEYS.map((pk, idx) => (
+                  <button
+                    key={pk}
+                    type="button"
+                    onClick={() => setActiveExamPart(pk)}
+                    className={`h-2 rounded-full transition-all ${
+                      activeExamPart === pk
+                        ? 'w-5 bg-slate-900 dark:bg-indigo-400'
+                        : currentAns[pk]
+                          ? 'w-2 bg-indigo-400 dark:bg-indigo-600'
+                          : 'w-2 bg-slate-200 dark:bg-slate-700'
+                    }`}
+                    aria-label={`Phần ${idx + 1}`}
+                  />
+                ))}
+              </div>
 
-              return (
-                <div
-                  key={pm.key}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900"
+              {examIdx < activeExam.situations.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setExamIdx((i) => i + 1)}
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
                 >
-                  <div className="mb-2.5 flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {pm.title}
-                    </span>
-                    <span className="shrink-0 rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
-                      {pm.badge}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {opts.map((opt) => {
-                      const isSelected = chosenLabel === opt.label;
-                      let optCls =
-                        'border-slate-200/80 bg-slate-50/60 text-slate-700 hover:bg-slate-100/80 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200';
-
-                      if (examSubmitted) {
-                        if (opt.isCorrect) {
-                          optCls =
-                            'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold dark:border-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-200';
-                        } else if (isSelected && !opt.isCorrect) {
-                          optCls =
-                            'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-600 dark:bg-rose-950/50 dark:text-rose-200';
-                        }
-                      } else if (isSelected) {
-                        optCls =
-                          'border-slate-900 bg-slate-900 text-white font-semibold dark:border-indigo-500 dark:bg-indigo-600';
-                      }
-
-                      return (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          disabled={examSubmitted}
-                          onClick={() => {
-                            hapticTap();
-                            setExamAnswers((prev) => ({
-                              ...prev,
-                              [examIdx]: {
-                                ...(prev[examIdx] || {}),
-                                [pm.key]: opt.label,
-                              },
-                            }));
-                          }}
-                          className={`flex w-full items-start gap-2.5 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${optCls}`}
-                        >
-                          <span className="font-mono font-bold">{opt.label}.</span>
-                          <span className="flex-1 leading-relaxed">{opt.text}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                  Câu tiếp <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : !examSubmitted ? (
+                <button
+                  type="button"
+                  onClick={handleSubmitExam}
+                  className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
+                >
+                  <Check className="h-4 w-4" /> Chấm điểm
+                </button>
+              ) : (
+                <span className="text-xs font-medium text-slate-400">Hết đề</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -577,44 +693,52 @@ export const SimulationView: React.FC = () => {
   const currentIdxInFiltered = filteredSituations.findIndex(
     (s) => s.id === currentStudySituation.id
   );
+  const activeStudyMeta =
+    PART_META.find((m) => m.key === activeStudyPart) ?? PART_META[0];
+  const activeStudyOpts = currentStudySituation.parts[activeStudyPart];
+  const chosenStudyOpt = currentStudyAns[activeStudyPart];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6">
-      {/* Page Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
-            <Film className="h-3.5 w-3.5" />
-            Thông tư 17/2026/TT-BXD • 120 Tình Huống Giao Thông
+    <div className="mx-auto w-full max-w-6xl space-y-3 px-3 py-3 sm:space-y-5 sm:px-6 sm:py-6">
+      {/* Compact Top Header + Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-2xs">
+            <Film className="h-4 w-4" />
           </div>
-          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            120 Tình Huống Mô Phỏng 2026
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            480 câu hỏi trắc nghiệm nhận diện nguy cơ (4 ý × 0,25đ = 1,0đ/tình huống) • Đã thuộc{' '}
-            <strong className="font-mono text-slate-800 dark:text-slate-200">
-              {masteredIds.length}/120
-            </strong>{' '}
-            tình huống.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
+                120 Tình Huống Mô Phỏng
+              </h1>
+              <span className="rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+                {masteredIds.length}/120 đã thuộc
+              </span>
+            </div>
+            <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
+              Chuẩn Thông tư 17/2026/TT-BXD • 4 câu trắc nghiệm × 0,25đ = 1,0 điểm / tình huống
+            </p>
+          </div>
         </div>
 
         <SegmentedControl
           value={tab}
           onChange={setTab}
           options={[
-            { id: 'study', label: 'Ôn 120 Tình Huống' },
-            { id: 'exam', label: 'Thi Thử 18 Đề' },
-            { id: 'guide', label: 'Quy Định 2026' },
+            { id: 'study', label: 'Ôn 120 TH' },
+            { id: 'exam', label: 'Thi 18 Đề' },
+            { id: 'guide', label: 'Quy Định' },
           ]}
         />
       </div>
 
-      {/* TAB 1: Ôn tập 120 Tình huống */}
+      {/* =====================================================================
+          TAB 1: ÔN TẬP 120 TÌNH HUỐNG (Mobile-First Zero-Scroll Layout)
+      ===================================================================== */}
       {tab === 'study' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Left Sidebar: Filter + 120 Situation Selector */}
-          <div className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs lg:col-span-4 lg:h-[calc(100vh-12rem)] dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
+          {/* Desktop Left Sidebar (Hidden on Mobile — Mobile uses Bottom Sheet Picker) */}
+          <div className="hidden flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs lg:col-span-4 lg:flex lg:h-[calc(100vh-11rem)] dark:border-slate-800 dark:bg-slate-900">
             <div className="space-y-2.5 border-b border-slate-100 pb-3 dark:border-slate-800">
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -660,7 +784,7 @@ export const SimulationView: React.FC = () => {
                       hapticTap();
                       setSelectedId(item.id);
                     }}
-                    className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
+                    className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
                       active
                         ? 'bg-slate-900 font-semibold text-white dark:bg-indigo-600'
                         : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70'
@@ -682,30 +806,35 @@ export const SimulationView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Workspace: Video + Summary + 4 Questions */}
-          <div className="space-y-5 lg:col-span-8">
-            {/* Video Card */}
+          {/* Main Study Workspace (Video + 4-Step Question Tab Card) */}
+          <div className="space-y-3 lg:col-span-8">
+            {/* Video Player Card with Compact Header */}
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
-                <div>
-                  <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                    TÌNH HUỐNG {currentStudySituation.id} / 120 • CHƯƠNG {currentStudySituation.chapter}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2.5 sm:px-5 dark:border-slate-800">
+                {/* Mobile Situation Drawer Trigger / Title */}
+                <button
+                  type="button"
+                  onClick={() => setShowMobilePicker(true)}
+                  className="flex min-w-0 items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-left text-xs font-bold text-slate-900 hover:bg-slate-200 lg:bg-transparent lg:p-0 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5 shrink-0 text-indigo-600 lg:hidden dark:text-indigo-400" />
+                  <span className="font-mono text-indigo-600 dark:text-indigo-400">
+                    TH {currentStudySituation.id}/120:
                   </span>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {currentStudySituation.name}
-                  </h2>
-                </div>
+                  <span className="truncate">{currentStudySituation.name}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400 lg:hidden" />
+                </button>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1">
                   {[1, 1.25, 1.5].map((rate) => (
                     <button
                       key={rate}
                       type="button"
                       onClick={() => setPlaybackRate(rate)}
-                      className={`rounded-lg px-2 py-1 font-mono text-[11px] font-semibold transition-colors ${
+                      className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold transition-colors ${
                         playbackRate === rate
                           ? 'bg-slate-900 text-white dark:bg-indigo-600'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       {rate}x
@@ -713,23 +842,20 @@ export const SimulationView: React.FC = () => {
                   ))}
                   <button
                     type="button"
-                    onClick={() => setShowSummaryCard((v) => !v)}
-                    className="ml-1 inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                    onClick={() => setShowHint((v) => !v)}
+                    className={`ml-0.5 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                      showHint
+                        ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                        : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+                    }`}
                   >
-                    {showSummaryCard ? (
-                      <>
-                        <EyeOff className="h-3.5 w-3.5" /> Ẩn gợi ý
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-3.5 w-3.5" /> Hiện gợi ý
-                      </>
-                    )}
+                    {showHint ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    Mẹo
                   </button>
                 </div>
               </div>
 
-              <div className="aspect-video w-full bg-black">
+              <div className="aspect-video max-h-[34vh] w-full bg-black sm:max-h-none">
                 <video
                   ref={studyVideoRef}
                   key={currentStudySituation.videoUrl}
@@ -740,9 +866,104 @@ export const SimulationView: React.FC = () => {
                   className="h-full w-full object-contain"
                 />
               </div>
+            </div>
 
-              {/* Prev / Next Navigation Bar */}
-              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+            {/* Compact 4-Step Tabbed Question Card (No vertical stack!) */}
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs sm:p-5 dark:border-slate-800 dark:bg-slate-900">
+              {/* 4-Part Step Selector Bar */}
+              <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/90">
+                {PART_META.map((pm) => {
+                  const isActive = activeStudyPart === pm.key;
+                  const pickedLabel = currentStudyAns[pm.key];
+                  const pickedObj = currentStudySituation.parts[pm.key].find(
+                    (o) => o.label === pickedLabel
+                  );
+
+                  return (
+                    <button
+                      key={pm.key}
+                      type="button"
+                      onClick={() => setActiveStudyPart(pm.key)}
+                      className={`flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-semibold transition-all ${
+                        isActive
+                          ? 'bg-white text-slate-900 shadow-2xs dark:bg-slate-900 dark:text-white'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+                      }`}
+                    >
+                      <span className="truncate">{pm.shortLabel}</span>
+                      {pickedObj && (
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            pickedObj.isCorrect ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Optional Compact Inline Hint Pill */}
+              {showHint && (
+                <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-indigo-200/80 bg-indigo-50/70 px-3 py-2 text-xs text-indigo-950 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-200">
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                  <div>
+                    <span className="font-semibold">Đáp án {activeStudyMeta.shortLabel}: </span>
+                    {currentStudySituation[activeStudyMeta.summaryField]}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Part Question & 3 Options */}
+              <div className="mt-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-900 sm:text-sm dark:text-slate-100">
+                    {activeStudyMeta.title}
+                  </span>
+                  <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {activeStudyMeta.badge}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {activeStudyOpts.map((opt) => {
+                    const isPicked = chosenStudyOpt === opt.label;
+                    let cls =
+                      'border-slate-200/80 bg-slate-50/70 text-slate-800 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200';
+
+                    if (chosenStudyOpt) {
+                      if (opt.isCorrect) {
+                        cls =
+                          'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold dark:border-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-200';
+                      } else if (isPicked) {
+                        cls =
+                          'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-600 dark:bg-rose-950/50 dark:text-rose-200';
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() =>
+                          handleSelectStudyAnswer(
+                            currentStudySituation,
+                            activeStudyPart,
+                            opt
+                          )
+                        }
+                        className={`flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs transition-colors sm:text-sm ${cls}`}
+                      >
+                        <span className="font-mono font-bold">{opt.label}.</span>
+                        <span className="flex-1 leading-snug">{opt.text}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Compact Bottom Navigation Row */}
+              <div className="mt-3.5 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-800">
                 <button
                   type="button"
                   disabled={currentIdxInFiltered <= 0}
@@ -751,23 +972,33 @@ export const SimulationView: React.FC = () => {
                       setSelectedId(filteredSituations[currentIdxInFiltered - 1].id);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+                  className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
                 >
-                  <ChevronLeft className="h-4 w-4" /> Tình huống trước
+                  <ChevronLeft className="h-4 w-4" /> TH trước
                 </button>
 
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => setShowMobilePicker(true)}
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 font-mono text-xs font-semibold text-slate-700 lg:hidden dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  TH {currentStudySituation.id}/120
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     setStudyAnswers((prev) => {
                       const copy = { ...prev };
                       delete copy[currentStudySituation.id];
                       return copy;
-                    })
-                  }
-                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400"
+                    });
+                    setActiveStudyPart('part1');
+                  }}
+                  className="hidden items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 lg:inline-flex dark:text-slate-400"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" /> Làm lại 4 câu này
+                  <RotateCcw className="h-3.5 w-3.5" /> Làm lại 4 ý
                 </button>
 
                 <button
@@ -784,139 +1015,126 @@ export const SimulationView: React.FC = () => {
                       setSelectedId(filteredSituations[currentIdxInFiltered + 1].id);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
                 >
-                  Tình huống tiếp <ChevronRight className="h-4 w-4" />
+                  TH tiếp <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* 4-Part Key Summary Box */}
-            {showSummaryCard && (
-              <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-5 dark:border-indigo-900/50 dark:bg-indigo-950/30">
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-300">
-                  <Sparkles className="h-4 w-4" />
-                  Tóm tắt 4 ý ăn trọn 1,0 điểm (Mỗi ý 0,25 điểm)
+          {/* Mobile Bottom Sheet Picker for 120 Situations */}
+          {showMobilePicker && (
+            <div
+              className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/60 backdrop-blur-xs lg:hidden"
+              onClick={() => setShowMobilePicker(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="flex max-h-[82vh] flex-col rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-slate-900"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Chọn tình huống ({filteredSituations.length}/120)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobilePicker(false)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="grid gap-3 text-xs sm:grid-cols-2">
-                  <div className="rounded-xl bg-white/90 p-3 dark:bg-slate-900/90">
-                    <div className="font-mono text-[11px] font-bold text-slate-400">
-                      1. TÊN TÌNH HUỐNG (0,25đ)
-                    </div>
-                    <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                      {currentStudySituation.name}
-                    </div>
+
+                <div className="space-y-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                  <div className="relative">
+                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Nhập số (1..120) hoặc từ khóa..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-3 pl-9 text-xs outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    />
                   </div>
-                  <div className="rounded-xl bg-white/90 p-3 dark:bg-slate-900/90">
-                    <div className="font-mono text-[11px] font-bold text-slate-400">
-                      2. DẤU HIỆU GIÁN TIẾP (0,25đ)
-                    </div>
-                    <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                      {currentStudySituation.indirect}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white/90 p-3 dark:bg-slate-900/90">
-                    <div className="font-mono text-[11px] font-bold text-slate-400">
-                      3. DẤU HIỆU TRỰC TIẾP (0,25đ)
-                    </div>
-                    <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                      {currentStudySituation.direct}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white/90 p-3 dark:bg-slate-900/90">
-                    <div className="font-mono text-[11px] font-bold text-slate-400">
-                      4. PHƯƠNG ÁN XỬ LÝ AN TOÀN (0,25đ)
-                    </div>
-                    <div className="mt-1 font-semibold text-emerald-700 dark:text-emerald-400">
-                      {currentStudySituation.action}
-                    </div>
-                  </div>
+                  <select
+                    value={chapterFilter}
+                    onChange={(e) => setChapterFilter(Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    <option value={0}>Tất cả 6 chương (120 tình huống)</option>
+                    {SIM_CHAPTERS.map((ch) => (
+                      <option key={ch.id} value={ch.id}>
+                        {ch.name} ({ch.count} câu)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-2 flex-1 space-y-1 overflow-y-auto">
+                  {filteredSituations.map((item) => {
+                    const active = item.id === currentStudySituation.id;
+                    const isMastered = masteredIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          hapticTap();
+                          setSelectedId(item.id);
+                          setShowMobilePicker(false);
+                        }}
+                        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs ${
+                          active
+                            ? 'bg-slate-900 font-semibold text-white dark:bg-indigo-600'
+                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 truncate">
+                          <span className="font-mono font-bold">TH {item.id}:</span> {item.name}
+                        </div>
+                        {isMastered && (
+                          <CheckCircle2
+                            className={`h-4 w-4 shrink-0 ${
+                              active ? 'text-emerald-300' : 'text-emerald-600'
+                            }`}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
-
-            {/* 4 Interactive Multiple-Choice Sub-Questions */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {PART_META.map((pm) => {
-                const opts = currentStudySituation.parts[pm.key];
-                const chosen = currentStudyAns[pm.key];
-
-                return (
-                  <div
-                    key={pm.key}
-                    className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900"
-                  >
-                    <div className="mb-2.5 flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {pm.title}
-                      </span>
-                      <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {pm.badge}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {opts.map((opt) => {
-                        const isPicked = chosen === opt.label;
-                        let cls =
-                          'border-slate-200/80 bg-slate-50/70 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300';
-
-                        if (chosen) {
-                          if (opt.isCorrect) {
-                            cls =
-                              'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold dark:border-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-200';
-                          } else if (isPicked) {
-                            cls =
-                              'border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-600 dark:bg-rose-950/50 dark:text-rose-200';
-                          }
-                        }
-
-                        return (
-                          <button
-                            key={opt.label}
-                            type="button"
-                            onClick={() =>
-                              handleSelectStudyAnswer(currentStudySituation, pm.key, opt)
-                            }
-                            className={`flex w-full items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${cls}`}
-                          >
-                            <span className="font-mono font-bold">{opt.label}.</span>
-                            <span className="flex-1 leading-relaxed">{opt.text}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* TAB 2: Thi thử 18 Bộ đề chuẩn */}
+      {/* =====================================================================
+          TAB 2: THI THỬ 18 BỘ ĐỀ CHUẨN
+      ===================================================================== */}
       {tab === 'exam' && !activeExam && (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs sm:p-5 dark:border-slate-800 dark:bg-slate-900">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                18 Bộ Đề Kiểm Tra Mô Phỏng (Chuẩn Thông tư 17/2026/TT-BXD)
+              <h2 className="text-sm font-bold text-slate-900 sm:text-base dark:text-slate-100">
+                18 Bộ Đề Kiểm Tra Mô Phỏng (Thông tư 17/2026/TT-BXD)
               </h2>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Mỗi đề gồm 10 tình huống (40 câu trắc nghiệm × 0,25đ = 10 điểm) • Thời gian 15 phút • Đạt từ 7,0/10 điểm.
+                10 tình huống / đề • Thang điểm 10 (0,25đ / ý) • 15 phút • Đạt từ 7,0/10 điểm.
               </p>
             </div>
             <button
               type="button"
               onClick={startRandomExam}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
             >
-              <Shuffle className="h-4 w-4" />
-              Tạo đề ngẫu nhiên (10 TH)
+              <Shuffle className="h-3.5 w-3.5" />
+              Đề ngẫu nhiên
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {SIM_EXAM_SETS.map((setItem) => {
               const rec = examHistory[setItem.maDe];
               let borderCls =
@@ -941,7 +1159,7 @@ export const SimulationView: React.FC = () => {
                   key={setItem.maDe}
                   type="button"
                   onClick={() => startExamSet(setItem.maDe)}
-                  className={`group flex flex-col justify-between rounded-2xl border p-4 text-left transition-all hover:shadow-sm ${borderCls}`}
+                  className={`group flex flex-col justify-between rounded-2xl border p-3.5 text-left transition-all hover:shadow-sm ${borderCls}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -955,10 +1173,10 @@ export const SimulationView: React.FC = () => {
                       <Play className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" />
                     )}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-400">
-                    TH: {setItem.questions.slice(0, 4).join(', ')}...
+                  <div className="mt-1 truncate text-[10px] text-slate-400">
+                    TH: {setItem.questions.slice(0, 5).join(', ')}...
                   </div>
-                  <div className={`mt-2.5 font-mono text-xs font-semibold ${statusCls}`}>
+                  <div className={`mt-2 font-mono text-xs font-semibold ${statusCls}`}>
                     {statusText}
                   </div>
                 </button>
@@ -968,59 +1186,61 @@ export const SimulationView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: Quy định & Trọng tâm 6 chương Mô phỏng 2026 */}
+      {/* =====================================================================
+          TAB 3: QUY ĐỊNH & 6 CHƯƠNG MÔ PHỎNG 2026
+      ===================================================================== */}
       {tab === 'guide' && (
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-6 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-4 sm:p-6 dark:border-indigo-900/60 dark:bg-indigo-950/30">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-block rounded-md bg-indigo-600 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white">
                 Thông tư 17/2026/TT-BXD
               </span>
               <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                Ban hành 29/04/2026 • Hiệu lực từ 01/07/2026
+                Hiệu lực từ 01/07/2026
               </span>
             </div>
-            <h2 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
-              Quy định kiểm tra mô phỏng các tình huống giao thông năm 2026
+            <h2 className="mt-2 text-sm font-bold text-slate-900 sm:text-base dark:text-slate-100">
+              Cách tính điểm bài kiểm tra mô phỏng năm 2026 (Thang điểm 10)
             </h2>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
-              Theo <strong>Thông tư 17/2026/TT-BXD</strong> (sửa đổi, bổ sung Thông tư 14/2025/TT-BXD), bài kiểm tra kết thúc học phần mô phỏng gồm <strong>10 tình huống</strong> (thời gian 15 phút), chấm trên <strong>thang điểm 10</strong> (đạt từ <strong>7,0 / 10 điểm</strong> trở lên). Mỗi tình huống tối đa <strong>1,0 điểm</strong> được chia thành <strong>4 câu hỏi trắc nghiệm (mỗi câu 0,25 điểm)</strong> thay vì bấm phím Space căn giây:
+            <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              Mỗi đề gồm <strong>10 tình huống</strong> (15 phút), đạt từ <strong>7,0 / 10 điểm</strong>. Mỗi tình huống tối đa <strong>1,0 điểm</strong> chia đều cho <strong>4 câu trắc nghiệm (0,25đ/câu)</strong>:
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {[
                 {
-                  step: 'Phần 1 • 0,25 điểm',
-                  title: 'Nhận diện Tên tình huống',
-                  desc: 'Xác định đúng bản chất nguy cơ giao thông đang diễn ra trong đoạn video.',
+                  step: 'Câu 1 • 0,25đ',
+                  title: 'Tên tình huống',
+                  desc: 'Nhận diện đúng tình huống nguy hiểm trong video.',
                 },
                 {
-                  step: 'Phần 2 • 0,25 điểm',
-                  title: 'Dấu hiệu Gián tiếp',
-                  desc: 'Nhận biết sớm yếu tố khuất tầm nhìn, biển báo, giao lộ, thời tiết hoặc địa hình từ xa.',
+                  step: 'Câu 2 • 0,25đ',
+                  title: 'Dấu hiệu gián tiếp',
+                  desc: 'Yếu tố che khuất tầm nhìn, biển báo hoặc giao lộ từ xa.',
                 },
                 {
-                  step: 'Phần 3 • 0,25 điểm',
-                  title: 'Dấu hiệu Trực tiếp',
-                  desc: 'Phát hiện khoảnh khắc đối tượng nguy hiểm trực tiếp xuất hiện (đèn phanh sáng, xe lấn làn, người bước ra).',
+                  step: 'Câu 3 • 0,25đ',
+                  title: 'Dấu hiệu trực tiếp',
+                  desc: 'Khoảnh khắc đối tượng nguy hiểm trực tiếp xuất hiện.',
                 },
                 {
-                  step: 'Phần 4 • 0,25 điểm',
-                  title: 'Phương án Xử lý',
-                  desc: 'Chọn cách xử lý lái xe an toàn: chủ động rà phanh, giảm tốc độ, giữ khoảng cách và nhường đường.',
+                  step: 'Câu 4 • 0,25đ',
+                  title: 'Phương án xử lý',
+                  desc: 'Chủ động rà phanh, giảm tốc độ và nhường đường.',
                 },
               ].map((item) => (
                 <div
                   key={item.step}
-                  className="rounded-xl border border-indigo-200/60 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+                  className="rounded-xl border border-indigo-200/60 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
                 >
-                  <div className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                  <div className="font-mono text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
                     {item.step}
                   </div>
-                  <div className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <div className="mt-0.5 text-xs font-bold text-slate-900 dark:text-slate-100">
                     {item.title}
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  <p className="mt-1 text-[11px] leading-snug text-slate-600 dark:text-slate-400">
                     {item.desc}
                   </p>
                 </div>
@@ -1028,7 +1248,7 @@ export const SimulationView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SIM_CHAPTERS.map((ch) => {
               const doneInChap = masteredIds.filter(
                 (id) => id >= ch.range[0] && id <= ch.range[1]
@@ -1036,18 +1256,18 @@ export const SimulationView: React.FC = () => {
               return (
                 <div
                   key={ch.id}
-                  className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900"
+                  className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900"
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="rounded-md bg-slate-100 px-2.5 py-0.5 font-mono text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        Tình huống {ch.range[0]}–{ch.range[1]}
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        TH {ch.range[0]}–{ch.range[1]}
                       </span>
                       <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                         {doneInChap}/{ch.count} đã thuộc
                       </span>
                     </div>
-                    <h3 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
+                    <h3 className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">
                       {ch.name}
                     </h3>
                     <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
@@ -1062,7 +1282,7 @@ export const SimulationView: React.FC = () => {
                       setSelectedId(ch.range[0]);
                       setTab('study');
                     }}
-                    className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
+                    className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Ôn chương {ch.id} ({ch.count} TH)
