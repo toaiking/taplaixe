@@ -189,8 +189,8 @@ export async function sendStudyNotification(
       if (reg && reg.active) {
         await reg.showNotification(title, {
           body,
-          icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
+          icon: '/icons/icon-192-v3.png?v=3',
+          badge: '/icons/icon-192-v3.png?v=3',
           tag: 'gplx-study-reminder',
           renotify: true,
         } as NotificationOptions);
@@ -205,7 +205,7 @@ export async function sendStudyNotification(
   try {
     const n = new Notification(title, {
       body,
-      icon: '/icons/icon-192.png',
+      icon: '/icons/icon-192-v3.png?v=3',
       tag: 'gplx-study-reminder',
     });
     n.onclick = () => {

@@ -1,12 +1,13 @@
-const CACHE_NAME = 'gplx-600-v3';
+const CACHE_NAME = 'gplx-600-v4';
 const SCHEDULE_CACHE_KEY = '/__gplx_schedule_state__';
+const APP_ICON_URL = '/icons/icon-192-v3.png?v=3';
 
 let swScheduleTimer = null;
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(['/', '/index.html', '/manifest.json']))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(['/', '/index.html']))
   );
 });
 
@@ -22,8 +23,8 @@ self.addEventListener('activate', (event) => {
 async function showStudyOSNotification(title, body, tag = 'gplx-study-reminder', url = '/?reminder=1') {
   return self.registration.showNotification(title || 'Đến giờ ôn thi GPLX 600 Câu!', {
     body: body || 'Mục tiêu hôm nay đang chờ bạn hoàn thành. Bấm để vào ôn ngay!',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: APP_ICON_URL,
+    badge: APP_ICON_URL,
     tag,
     renotify: true,
     requireInteraction: true,
@@ -106,8 +107,8 @@ self.addEventListener('message', (event) => {
               if (TriggerClass && schedule.nextTriggerTimeMs > Date.now()) {
                 await self.registration.showNotification('Đến giờ ôn thi GPLX 600 Câu!', {
                   body: `Mục tiêu hôm nay: ${schedule.dailyGoal || 25} câu. Bấm để vào ôn tập ngay!`,
-                  icon: '/icons/icon-192.png',
-                  badge: '/icons/icon-192.png',
+                  icon: APP_ICON_URL,
+                  badge: APP_ICON_URL,
                   tag: 'gplx-study-scheduled-trigger',
                   showTrigger: new TriggerClass(schedule.nextTriggerTimeMs),
                   data: { url: '/?reminder=1' },
@@ -153,11 +154,30 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
 
+  // Always bypass old cache for icons, favicon, and manifest (network-first with cache reload)
+  if (
+    url.pathname.startsWith('/icons/') ||
+    url.pathname === '/favicon.svg' ||
+    url.pathname === '/manifest.json'
+  ) {
+    event.respondWith(
+      fetch(request, { cache: 'no-cache' })
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
   // Cache-first for static assets and traffic sign images
   if (
     url.pathname.startsWith('/images/') ||
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.startsWith('/icons/')
+    url.pathname.startsWith('/assets/')
   ) {
     event.respondWith(
       caches.match(request).then(

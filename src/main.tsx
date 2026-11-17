@@ -5,9 +5,27 @@ import './index.css';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Ignore SW registration failure in unsupported environments
-    });
+    if ('caches' in window) {
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter((k) => k !== 'gplx-600-v4')
+              .map((k) => caches.delete(k))
+          )
+        )
+        .catch(() => {});
+    }
+
+    navigator.serviceWorker
+      .register('/sw.js?v=4', { updateViaCache: 'none' })
+      .then((reg) => {
+        reg.update().catch(() => {});
+      })
+      .catch(() => {
+        // Ignore SW registration failure in unsupported environments
+      });
   });
 }
 
