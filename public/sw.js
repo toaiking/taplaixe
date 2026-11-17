@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gplx-600-v1';
+const CACHE_NAME = 'gplx-600-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -16,6 +16,25 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = '/?reminder=1';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'NOTIFICATION_CLICKED' });
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -24,7 +43,11 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Cache-first for static assets and traffic sign images
-  if (url.pathname.startsWith('/images/') || url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+  if (
+    url.pathname.startsWith('/images/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.startsWith('/icons/')
+  ) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

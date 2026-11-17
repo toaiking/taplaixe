@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, BellRing, Check, Clock, X } from 'lucide-react';
+import { Bell, BellRing, CalendarPlus, Check, Clock, Smartphone, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PracticeSourceMode } from '../types/question';
 import {
+  downloadScheduleICS,
   getNotificationPermission,
+  isIOSNonStandalone,
   requestNotificationPermission,
   sendStudyNotification,
 } from '../utils/scheduler';
@@ -12,6 +14,7 @@ import {
 interface StudyScheduleModalProps {
   open: boolean;
   onClose: () => void;
+  onTestBanner?: () => void;
 }
 
 const WEEKDAYS = [
@@ -27,17 +30,29 @@ const WEEKDAYS = [
 export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
   open,
   onClose,
+  onTestBanner,
 }) => {
   const { studySchedule, updateStudySchedule } = useAppStore();
   const [perm, setPerm] = useState(getNotificationPermission());
-  const [testSent, setTestSent] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<{
+    ok: boolean;
+    msg: string;
+  } | null>(null);
+  const iosNeedsInstall = isIOSNonStandalone();
+
+  useEffect(() => {
+    if (open) {
+      setPerm(getNotificationPermission());
+      setTestStatus(null);
+    }
+  }, [open]);
 
   const toggleDay = (dayId: number) => {
     const exists = studySchedule.days.includes(dayId);
     const next = exists
       ? studySchedule.days.filter((d) => d !== dayId)
       : [...studySchedule.days, dayId];
-    updateStudySchedule({ days: next });
+    updateStudySchedule({ days: next.length ? next : [dayId], lastNotifiedDate: null });
   };
 
   const handleEnableToggle = async () => {
@@ -46,26 +61,43 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
       const p = await requestNotificationPermission();
       setPerm(p);
     }
-    updateStudySchedule({ enabled: nextEnabled });
+    updateStudySchedule({ enabled: nextEnabled, lastNotifiedDate: null });
   };
 
   const handleTestNotification = async () => {
     const p = await requestNotificationPermission();
     setPerm(p);
-    if (p !== 'granted') {
-      setTestSent('Trình duyệt chưa cấp quyền thông báo. Vui lòng cho phép trong cài đặt.');
-      return;
-    }
-    const ok = await sendStudyNotification(
+
+    const res = await sendStudyNotification(
       'Đến giờ ôn thi GPLX 600 Câu!',
       `Mục tiêu hôm nay: ${studySchedule.dailyGoal} câu. Bấm để vào ôn tập ngay.`
     );
-    setTestSent(
-      ok
-        ? 'Đã gửi thông báo thử thành công!'
-        : 'Không thể gửi thông báo hệ thống trên thiết bị này.'
-    );
-    window.setTimeout(() => setTestSent(null), 4000);
+
+    if (onTestBanner) {
+      onTestBanner();
+    }
+
+    if (res.sentOS) {
+      setTestStatus({
+        ok: true,
+        msg: 'Đã phát chuông báo + gửi thông báo hệ thống thành công!',
+      });
+    } else if (iosNeedsInstall) {
+      setTestStatus({
+        ok: true,
+        msg: 'Đã phát âm báo & banner trong app! Trên iPhone, hãy chọn "Chia sẻ → Thêm vào MH chính" hoặc bấm "Lưu vào Lịch máy" bên dưới để nhận báo thức nền.',
+      });
+    } else if (p === 'denied') {
+      setTestStatus({
+        ok: false,
+        msg: 'Đã phát âm báo & banner trong app, nhưng trình duyệt đang chặn thông báo đẩy. Hãy bật quyền Thông báo ở thanh địa chỉ hoặc dùng nút "Lưu vào Lịch máy".',
+      });
+    } else {
+      setTestStatus({
+        ok: true,
+        msg: 'Đã phát âm báo & hiển thị nhắc nhở trong ứng dụng!',
+      });
+    }
   };
 
   return (
@@ -83,7 +115,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -95,7 +127,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     Lịch Ôn Tập &amp; Nhắc Nhở
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Gửi thông báo tự động khi đến giờ học
+                    Hoạt động trên cả máy tính và điện thoại
                   </p>
                 </div>
               </div>
@@ -113,25 +145,27 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
               <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-950">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Bật nhắc nhở học hàng ngày
+                    Bật tự động nhắc giờ học
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    Quyền thông báo:{' '}
+                    Trạng thái trình duyệt:{' '}
                     <span className="font-mono font-semibold">
                       {perm === 'granted'
                         ? 'Đã cấp phép'
                         : perm === 'denied'
-                          ? 'Bị chặn'
+                          ? 'Đang chặn'
                           : perm === 'unsupported'
-                            ? 'Không hỗ trợ'
-                            : 'Chưa hỏi'}
+                            ? 'Chế độ chuông trong app'
+                            : 'Chưa cấp phép'}
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={studySchedule.enabled}
                   onClick={handleEnableToggle}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                     studySchedule.enabled
                       ? 'bg-slate-900 dark:bg-indigo-600'
                       : 'bg-slate-300 dark:bg-slate-700'
@@ -145,6 +179,16 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 </button>
               </div>
 
+              {/* iOS helper notice */}
+              {iosNeedsInstall && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+                  <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <span>
+                    <strong>Mẹo trên iPhone/iPad:</strong> Chọn <em>Chia sẻ → Thêm vào MH chính</em> để nhận thông báo đẩy iOS, hoặc bấm nút <strong>Lưu vào Lịch máy (.ics)</strong> bên dưới để báo thức ngay cả khi tắt trình duyệt.
+                  </span>
+                </div>
+              )}
+
               {/* Time & Daily Goal */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -155,7 +199,11 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     type="time"
                     value={studySchedule.time}
                     onChange={(e) =>
-                      updateStudySchedule({ time: e.target.value })
+                      updateStudySchedule({
+                        time: e.target.value,
+                        lastNotifiedDate: null,
+                        enabled: true,
+                      })
                     }
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
@@ -227,13 +275,35 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 </select>
               </div>
 
-              {testSent && (
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-950/50 dark:text-indigo-200">
-                  {testSent}
+              {/* Native OS Calendar / Alarm Sync (.ics) */}
+              <button
+                type="button"
+                onClick={() =>
+                  downloadScheduleICS(
+                    studySchedule.time,
+                    studySchedule.days,
+                    studySchedule.dailyGoal
+                  )
+                }
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100/80 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-300"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                Lưu vào Lịch điện thoại / Máy tính (.ics) để báo khi tắt máy
+              </button>
+
+              {testStatus && (
+                <div
+                  className={`rounded-xl border px-3 py-2.5 text-xs font-medium leading-relaxed ${
+                    testStatus.ok
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200'
+                      : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-200'
+                  }`}
+                >
+                  {testStatus.msg}
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-2 pt-2">
+              <div className="flex items-center justify-between gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleTestNotification}
@@ -248,7 +318,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                   className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-indigo-600"
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Lưu lịch ôn
+                  Hoàn tất
                 </button>
               </div>
             </div>

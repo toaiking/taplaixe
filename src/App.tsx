@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BellRing, X } from 'lucide-react';
 import questionsData from './data/questions.json';
 import { CheatSheetView } from './components/CheatSheetView';
@@ -9,7 +9,11 @@ import { Navbar } from './components/Navbar';
 import { QuizWorkspace } from './components/QuizWorkspace';
 import { useAppStore } from './store/useAppStore';
 import { Question } from './types/question';
-import { sendStudyNotification } from './utils/scheduler';
+import {
+  getTodayStr,
+  isScheduleDueNow,
+  sendStudyNotification,
+} from './utils/scheduler';
 
 const questions = questionsData as Question[];
 
@@ -34,37 +38,73 @@ export function App() {
     }
   }, [darkMode]);
 
-  // Background Study Schedule Checker (every 30s)
+  // Handle Service Worker notification click or ?reminder=1 query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reminder') === '1') {
+      window.history.replaceState({}, '', '/');
+      navigateToPractice({
+        chapter: 'all',
+        sourceMode: studySchedule.focusMode,
+      });
+    }
+
+    if ('serviceWorker' in navigator) {
+      const onSwMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'NOTIFICATION_CLICKED') {
+          navigateToPractice({
+            chapter: 'all',
+            sourceMode: studySchedule.focusMode,
+          });
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+      return () =>
+        navigator.serviceWorker.removeEventListener('message', onSwMessage);
+    }
+  }, [navigateToPractice, studySchedule.focusMode]);
+
+  const checkSchedule = useCallback(() => {
+    if (!studySchedule.enabled) return;
+    const now = new Date();
+    if (
+      isScheduleDueNow(
+        studySchedule.time,
+        studySchedule.days,
+        studySchedule.lastNotifiedDate,
+        now
+      )
+    ) {
+      const todayStr = getTodayStr(now);
+      updateStudySchedule({ lastNotifiedDate: todayStr });
+      setReminderBanner(true);
+      sendStudyNotification(
+        'Đến giờ ôn thi GPLX 600 Câu!',
+        `Mục tiêu hôm nay: ${studySchedule.dailyGoal} câu. Bấm để vào ôn tập ngay!`
+      );
+    }
+  }, [studySchedule, updateStudySchedule]);
+
+  // Run schedule checker every 15s + on mobile wake/visibilitychange/focus
   useEffect(() => {
     if (!studySchedule.enabled) return;
 
-    const checkSchedule = () => {
-      const now = new Date();
-      const day = now.getDay();
-      if (!studySchedule.days.includes(day)) return;
-
-      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(
-        now.getMinutes()
-      ).padStart(2, '0')}`;
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-        2,
-        '0'
-      )}-${String(now.getDate()).padStart(2, '0')}`;
-
-      if (hhmm === studySchedule.time && studySchedule.lastNotifiedDate !== todayStr) {
-        updateStudySchedule({ lastNotifiedDate: todayStr });
-        setReminderBanner(true);
-        sendStudyNotification(
-          'Đến giờ ôn thi GPLX 600 Câu!',
-          `Mục tiêu hôm nay: ${studySchedule.dailyGoal} câu. Hãy vào ôn ngay để giữ vững phong độ!`
-        );
+    checkSchedule();
+    const timer = window.setInterval(checkSchedule, 15000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkSchedule();
       }
     };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', checkSchedule);
 
-    checkSchedule();
-    const timer = window.setInterval(checkSchedule, 30000);
-    return () => clearInterval(timer);
-  }, [studySchedule, updateStudySchedule]);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', checkSchedule);
+    };
+  }, [studySchedule.enabled, checkSchedule]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
