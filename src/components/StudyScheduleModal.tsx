@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, BellRing, Check, Clock, Smartphone, X } from 'lucide-react';
+import { Bell, BellRing, Check, Clock, Send, Smartphone, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PracticeSourceMode } from '../types/question';
 import {
   getNotificationPermission,
   isIOSNonStandalone,
   requestNotificationPermission,
+  scheduleBackgroundNotification,
   sendStudyNotification,
+  syncScheduleWithBackground,
 } from '../utils/scheduler';
 
 interface StudyScheduleModalProps {
@@ -37,21 +39,37 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
     ok: boolean;
     msg: string;
   } | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const iosNeedsInstall = isIOSNonStandalone();
 
   useEffect(() => {
     if (open) {
       setPerm(getNotificationPermission());
       setTestStatus(null);
+      setCountdown(null);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return;
+    const id = window.setTimeout(() => {
+      setCountdown((c) => (c !== null && c > 1 ? c - 1 : null));
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [countdown]);
 
   const toggleDay = (dayId: number) => {
     const exists = studySchedule.days.includes(dayId);
     const next = exists
       ? studySchedule.days.filter((d) => d !== dayId)
       : [...studySchedule.days, dayId];
-    updateStudySchedule({ days: next.length ? next : [dayId], lastNotifiedDate: null });
+    const updated = {
+      ...studySchedule,
+      days: next.length ? next : [dayId],
+      lastNotifiedDate: null,
+    };
+    updateStudySchedule({ days: updated.days, lastNotifiedDate: null });
+    syncScheduleWithBackground(updated);
   };
 
   const handleEnableToggle = async () => {
@@ -60,7 +78,22 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
       const p = await requestNotificationPermission();
       setPerm(p);
     }
+    const updated = {
+      ...studySchedule,
+      enabled: nextEnabled,
+      lastNotifiedDate: null,
+    };
     updateStudySchedule({ enabled: nextEnabled, lastNotifiedDate: null });
+    syncScheduleWithBackground(updated);
+  };
+
+  const handleSaveAndClose = async () => {
+    if (studySchedule.enabled && perm !== 'granted') {
+      const p = await requestNotificationPermission();
+      setPerm(p);
+    }
+    await syncScheduleWithBackground(studySchedule);
+    onClose();
   };
 
   const handleTestNotification = async () => {
@@ -79,24 +112,51 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
     if (res.sentOS) {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát chuông báo + gửi thông báo trực tiếp lên thiết bị thành công!',
+        msg: 'Đã phát chuông báo + gửi thông báo đẩy trực tiếp lên thiết bị thành công!',
       });
     } else if (iosNeedsInstall) {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát chuông báo trong ứng dụng! Trên iPhone, bạn có thể bấm nút "Cài App" (Thêm vào MH chính) để nhận thông báo đẩy của iOS.',
+        msg: 'Đã phát chuông báo! Trên iPhone, hãy bấm nút "Cài App" (Chia sẻ → Thêm vào MH chính) để iOS cho phép gửi thông báo khi thoát ứng dụng.',
       });
     } else if (p === 'denied') {
       setTestStatus({
         ok: false,
-        msg: 'Đã phát chuông báo trong ứng dụng! Nếu muốn hiện thông báo ngoài màn hình, hãy cho phép quyền Thông báo ở biểu tượng ổ khóa trên thanh địa chỉ.',
+        msg: 'Quyền thông báo đang bị chặn trên trình duyệt. Hãy bấm biểu tượng ổ khóa trên thanh địa chỉ → Bật Thông báo để nhận khi đóng App.',
       });
     } else {
       setTestStatus({
         ok: true,
-        msg: 'Đã phát chuông báo & hiển thị nhắc nhở trực tiếp trong ứng dụng!',
+        msg: 'Đã phát chuông báo & hiển thị nhắc nhở trực tiếp!',
       });
     }
+  };
+
+  const handleBackgroundTest5s = async () => {
+    const p = await requestNotificationPermission();
+    setPerm(p);
+
+    if (p !== 'granted') {
+      setTestStatus({
+        ok: false,
+        msg: iosNeedsInstall
+          ? 'Trên iPhone/iPad, bạn cần cài ứng dụng ra Màn hình chính (Chia sẻ → Thêm vào MH chính) rồi mở lại từ Màn hình chính để bật thông báo ngầm.'
+          : 'Vui lòng bấm "Cho phép" quyền Thông báo trên trình duyệt để nhận thông báo khi đóng ứng dụng.',
+      });
+      return;
+    }
+
+    setCountdown(5);
+    await scheduleBackgroundNotification(
+      '🔔 Thông báo ngầm GPLX 600 Câu!',
+      `Hoạt động tốt cả khi đóng App! Mục tiêu: ${studySchedule.dailyGoal} câu/ngày.`,
+      5000
+    );
+
+    setTestStatus({
+      ok: true,
+      msg: 'Đã hẹn gửi thông báo đẩy sau 5 giây! Bạn hãy thoát ra Màn hình chính hoặc khóa màn hình điện thoại ngay bây giờ để kiểm tra.',
+    });
   };
 
   return (
@@ -126,7 +186,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     Lịch Ôn Tập &amp; Nhắc Nhở
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Gửi thông báo &amp; chuông nhắc trực tiếp trên trình duyệt / App
+                    Gửi thông báo đẩy (Web Push) kể cả khi đóng ứng dụng
                   </p>
                 </div>
               </div>
@@ -147,15 +207,15 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     Bật tự động nhắc giờ học
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    Trạng thái thông báo:{' '}
+                    Trạng thái thông báo đẩy:{' '}
                     <span className="font-mono font-semibold">
                       {perm === 'granted'
-                        ? 'Đã bật'
+                        ? 'Đã kết nối Web Push'
                         : perm === 'denied'
-                          ? 'Chỉ báo chuông trong app'
+                          ? 'Đang bị chặn quyền'
                           : perm === 'unsupported'
                             ? 'Báo chuông trong app'
-                            : 'Sẵn sàng'}
+                            : 'Chờ cấp quyền'}
                     </span>
                   </div>
                 </div>
@@ -183,7 +243,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
                   <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                   <span>
-                    <strong>Mẹo trên iPhone/iPad:</strong> Bạn có thể bấm nút <strong>Cài App</strong> trên thanh đầu trang (<em>Chia sẻ → Thêm vào MH chính</em>) để nhận thông báo đẩy chuẩn của iOS.
+                    <strong>Lưu ý trên iPhone/iPad:</strong> Để nhận thông báo khi đã đóng trình duyệt, iOS yêu cầu bạn bấm nút <strong>Cài App</strong> trên thanh đầu trang (hoặc <em>Chia sẻ → Thêm vào MH chính</em>) rồi mở App từ màn hình chính.
                   </span>
                 </div>
               )}
@@ -197,13 +257,25 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                   <input
                     type="time"
                     value={studySchedule.time}
-                    onChange={(e) =>
-                      updateStudySchedule({
-                        time: e.target.value,
+                    onChange={async (e) => {
+                      const nextTime = e.target.value;
+                      if (perm !== 'granted') {
+                        const p = await requestNotificationPermission();
+                        setPerm(p);
+                      }
+                      const updated = {
+                        ...studySchedule,
+                        time: nextTime,
                         lastNotifiedDate: null,
                         enabled: true,
-                      })
-                    }
+                      };
+                      updateStudySchedule({
+                        time: nextTime,
+                        lastNotifiedDate: null,
+                        enabled: true,
+                      });
+                      syncScheduleWithBackground(updated);
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>
@@ -214,9 +286,11 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                   </label>
                   <select
                     value={studySchedule.dailyGoal}
-                    onChange={(e) =>
-                      updateStudySchedule({ dailyGoal: Number(e.target.value) })
-                    }
+                    onChange={(e) => {
+                      const goal = Number(e.target.value);
+                      updateStudySchedule({ dailyGoal: goal });
+                      syncScheduleWithBackground({ ...studySchedule, dailyGoal: goal });
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     <option value={15}>15 câu / ngày</option>
@@ -286,24 +360,34 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-2 pt-1">
+              {/* Test buttons row */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleTestNotification}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <BellRing className="h-3.5 w-3.5 text-indigo-600" />
-                  Gửi thông báo thử
+                  Thử ngay lập tức
                 </button>
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-indigo-600"
+                  onClick={handleBackgroundTest5s}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-950/50 dark:text-indigo-300"
                 >
-                  <Check className="h-3.5 w-3.5" />
-                  Lưu lịch ôn
+                  <Send className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  {countdown ? `Đóng App ngay (${countdown}s)...` : 'Thử khi đóng App (5s)'}
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={handleSaveAndClose}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Lưu lịch ôn tập
+              </button>
             </div>
           </motion.div>
         </motion.div>

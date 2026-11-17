@@ -1,4 +1,7 @@
-const CACHE_NAME = 'gplx-600-v2';
+const CACHE_NAME = 'gplx-600-v3';
+const SCHEDULE_CACHE_KEY = '/__gplx_schedule_state__';
+
+let swScheduleTimer = null;
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -16,9 +19,116 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+async function showStudyOSNotification(title, body, tag = 'gplx-study-reminder', url = '/?reminder=1') {
+  return self.registration.showNotification(title || 'Đến giờ ôn thi GPLX 600 Câu!', {
+    body: body || 'Mục tiêu hôm nay đang chờ bạn hoàn thành. Bấm để vào ôn ngay!',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag,
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 300],
+    data: { url },
+  });
+}
+
+// 1. Handle real Web Push events (works when app is completely closed on Android & iOS PWA)
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: 'Đến giờ ôn thi GPLX 600 Câu!',
+    body: 'Bấm để vào ôn tập ngay hôm nay!',
+    url: '/?reminder=1',
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch {
+      payload.body = event.data.text() || payload.body;
+    }
+  }
+
+  event.waitUntil(
+    showStudyOSNotification(payload.title, payload.body, 'gplx-study-reminder', payload.url)
+  );
+});
+
+// 2. Handle messages from client (delayed background triggers + schedule sync)
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || !data.type) return;
+
+  if (data.type === 'SCHEDULE_DELAYED_SW') {
+    const delayMs = Math.max(0, Math.min(Number(data.delayMs) || 0, 300000));
+    const title = data.title || 'Đến giờ ôn thi GPLX 600 Câu!';
+    const body = data.body || 'Bấm để vào ôn tập ngay!';
+    const tag = data.tag || 'gplx-study-reminder';
+
+    if (swScheduleTimer) {
+      clearTimeout(swScheduleTimer);
+      swScheduleTimer = null;
+    }
+
+    event.waitUntil(
+      new Promise((resolve) => {
+        swScheduleTimer = setTimeout(async () => {
+          swScheduleTimer = null;
+          try {
+            await showStudyOSNotification(title, body, tag, '/?reminder=1');
+          } catch {
+            // Ignore
+          }
+          resolve();
+        }, delayMs);
+      })
+    );
+  }
+
+  if (data.type === 'SET_SCHEDULE') {
+    const schedule = data.schedule;
+    event.waitUntil(
+      (async () => {
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(
+            SCHEDULE_CACHE_KEY,
+            new Response(JSON.stringify(schedule), {
+              headers: { 'Content-Type': 'application/json' },
+            })
+          );
+
+          // If browser supports TimestampTrigger (Notification Triggers API), schedule OS-level trigger
+          if ('showTrigger' in Notification.prototype && schedule && schedule.enabled && schedule.nextTriggerTimeMs) {
+            try {
+              // @ts-ignore
+              const TriggerClass = self.TimestampTrigger;
+              if (TriggerClass && schedule.nextTriggerTimeMs > Date.now()) {
+                await self.registration.showNotification('Đến giờ ôn thi GPLX 600 Câu!', {
+                  body: `Mục tiêu hôm nay: ${schedule.dailyGoal || 25} câu. Bấm để vào ôn tập ngay!`,
+                  icon: '/icons/icon-192.png',
+                  badge: '/icons/icon-192.png',
+                  tag: 'gplx-study-scheduled-trigger',
+                  showTrigger: new TriggerClass(schedule.nextTriggerTimeMs),
+                  data: { url: '/?reminder=1' },
+                });
+              }
+            } catch {
+              // TimestampTrigger not enabled on this device
+            }
+          }
+        } catch {
+          // Ignore cache errors
+        }
+      })()
+    );
+  }
+});
+
+// 3. Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = '/?reminder=1';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/?reminder=1';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -41,6 +151,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   // Cache-first for static assets and traffic sign images
   if (

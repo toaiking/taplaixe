@@ -1,3 +1,19 @@
+import { StudySchedule } from '../types/question';
+
+const VAPID_PUBLIC_KEY =
+  'BLiQuh0I2fR3ziFUixidbyvCxPwpJPDtYKdWCuyOqMMosIM1Wz-axwHitBxBdx5IdLPUOTNvoQA6k2inRCwJ4eI';
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return 'unsupported';
@@ -17,6 +33,30 @@ export function isIOSNonStandalone(): boolean {
   return isIOS && !standalone;
 }
 
+export async function ensurePushSubscription(): Promise<PushSubscription | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return null;
+  }
+  if (Notification.permission !== 'granted') {
+    return null;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const appServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: appServerKey.buffer as ArrayBuffer,
+      });
+    }
+    return sub;
+  } catch {
+    return null;
+  }
+}
+
 export async function requestNotificationPermission(): Promise<
   NotificationPermission | 'unsupported'
 > {
@@ -24,6 +64,7 @@ export async function requestNotificationPermission(): Promise<
     return 'unsupported';
   }
   if (Notification.permission === 'granted') {
+    await ensurePushSubscription();
     return 'granted';
   }
   try {
@@ -33,6 +74,9 @@ export async function requestNotificationPermission(): Promise<
         maybePromise.then(resolve).catch(() => resolve(Notification.permission));
       }
     });
+    if (result === 'granted') {
+      await ensurePushSubscription();
+    }
     return result;
   } catch {
     return Notification.permission;
@@ -70,6 +114,58 @@ export function playReminderChime(): void {
   }
 }
 
+export async function scheduleBackgroundNotification(
+  title: string,
+  body: string,
+  delayMs = 0
+): Promise<{ scheduledPush: boolean; scheduledSW: boolean }> {
+  let scheduledPush = false;
+  let scheduledSW = false;
+
+  // 1. Schedule Service Worker background waitUntil timer (works up to 5 minutes after closing app)
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.active) {
+        reg.active.postMessage({
+          type: 'SCHEDULE_DELAYED_SW',
+          title,
+          body,
+          delayMs,
+          tag: 'gplx-study-reminder',
+        });
+        scheduledSW = true;
+      }
+    }
+  } catch {
+    // Ignore SW message errors
+  }
+
+  // 2. Dispatch real Web Push via Vercel Serverless Function (wakes Android FCM & iOS PWA even when completely closed)
+  try {
+    const sub = await ensurePushSubscription();
+    if (sub && delayMs <= 55000) {
+      fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub,
+          title,
+          body,
+          delayMs,
+          url: '/?reminder=1',
+        }),
+        keepalive: true,
+      }).catch(() => {});
+      scheduledPush = true;
+    }
+  } catch {
+    // Ignore network errors
+  }
+
+  return { scheduledPush, scheduledSW };
+}
+
 export async function sendStudyNotification(
   title: string,
   body: string
@@ -82,6 +178,9 @@ export async function sendStudyNotification(
   if (Notification.permission !== 'granted') {
     return { sentOS: false, reason: Notification.permission };
   }
+
+  // Also trigger Web Push (delayMs: 0) so if the phone just went to background/lockscreen, FCM/APNs wakes it
+  scheduleBackgroundNotification(title, body, 0).catch(() => {});
 
   // 1. Prefer ServiceWorkerRegistration.showNotification (required on Android Chrome & mobile PWAs)
   try {
@@ -125,6 +224,104 @@ export function getTodayStr(now = new Date()): string {
   ).padStart(2, '0')}`;
 }
 
+export function getMsUntilTodayTarget(
+  timeStr: string,
+  days: number[],
+  now = new Date()
+): number | null {
+  if (!days.includes(now.getDay())) return null;
+  const parts = timeStr.split(':');
+  if (parts.length !== 2) return null;
+  const targetH = parseInt(parts[0], 10);
+  const targetM = parseInt(parts[1], 10);
+  if (isNaN(targetH) || isNaN(targetM)) return null;
+
+  const targetDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    targetH,
+    targetM,
+    0,
+    0
+  );
+  const diff = targetDate.getTime() - now.getTime();
+  return diff > 0 ? diff : null;
+}
+
+let lastPreScheduledKey: string | null = null;
+
+export async function syncScheduleWithBackground(schedule: StudySchedule): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const now = new Date();
+  const msUntil = schedule.enabled
+    ? getMsUntilTodayTarget(schedule.time, schedule.days, now)
+    : null;
+
+  // 1. Sync schedule state to Service Worker (for TimestampTrigger & CacheStorage)
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.active) {
+        reg.active.postMessage({
+          type: 'SET_SCHEDULE',
+          schedule: {
+            ...schedule,
+            nextTriggerTimeMs: msUntil ? Date.now() + msUntil : null,
+          },
+        });
+      }
+    }
+  } catch {
+    // Ignore
+  }
+
+  // 2. If target time is within the next 5 minutes, pre-schedule SW timer + Web Push
+  if (
+    schedule.enabled &&
+    msUntil !== null &&
+    msUntil > 0 &&
+    msUntil <= 300000 &&
+    schedule.lastNotifiedDate !== getTodayStr(now)
+  ) {
+    const key = `${getTodayStr(now)}_${schedule.time}`;
+    if (lastPreScheduledKey !== key) {
+      lastPreScheduledKey = key;
+      await scheduleBackgroundNotification(
+        'Đến giờ ôn thi GPLX 600 Câu!',
+        `Mục tiêu hôm nay: ${schedule.dailyGoal} câu. Bấm để vào ôn tập ngay!`,
+        msUntil
+      );
+    }
+  }
+}
+
+export function createBackgroundTicker(onTick: () => void, intervalMs = 10000): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  try {
+    const blob = new Blob(
+      [
+        `const id = setInterval(() => postMessage('tick'), ${intervalMs});
+         onmessage = (e) => { if (e.data === 'stop') clearInterval(id); };`,
+      ],
+      { type: 'application/javascript' }
+    );
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    worker.onmessage = () => onTick();
+    return () => {
+      worker.postMessage('stop');
+      worker.terminate();
+      URL.revokeObjectURL(url);
+    };
+  } catch {
+    const id = window.setInterval(onTick, intervalMs);
+    return () => window.clearInterval(id);
+  }
+}
+
 export function isScheduleDueNow(
   timeStr: string,
   days: number[],
@@ -149,4 +346,3 @@ export function isScheduleDueNow(
   // Trigger if current time is at or after target time (up to 4 hours catch-up window for mobile sleep/wake)
   return nowTotalMin >= targetTotalMin && nowTotalMin - targetTotalMin <= 240;
 }
-

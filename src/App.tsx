@@ -10,9 +10,12 @@ import { QuizWorkspace } from './components/QuizWorkspace';
 import { useAppStore } from './store/useAppStore';
 import { Question } from './types/question';
 import {
+  createBackgroundTicker,
+  ensurePushSubscription,
   getTodayStr,
   isScheduleDueNow,
   sendStudyNotification,
+  syncScheduleWithBackground,
 } from './utils/scheduler';
 
 const questions = questionsData as Question[];
@@ -66,6 +69,10 @@ export function App() {
 
   const checkSchedule = useCallback(() => {
     if (!studySchedule.enabled) return;
+
+    // Pre-sync with Service Worker & Web Push if target time is approaching
+    syncScheduleWithBackground(studySchedule).catch(() => {});
+
     const now = new Date();
     if (
       isScheduleDueNow(
@@ -85,26 +92,38 @@ export function App() {
     }
   }, [studySchedule, updateStudySchedule]);
 
-  // Run schedule checker every 15s + on mobile wake/visibilitychange/focus
+  // Run schedule checker in a Web Worker every 10s + on mobile wake/visibilitychange/pagehide
   useEffect(() => {
     if (!studySchedule.enabled) return;
 
+    ensurePushSubscription().catch(() => {});
     checkSchedule();
-    const timer = window.setInterval(checkSchedule, 15000);
+
+    const stopWorker = createBackgroundTicker(checkSchedule, 10000);
+
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         checkSchedule();
+      } else {
+        // When user switches away or locks screen on mobile, immediately sync upcoming schedule to SW + Web Push
+        syncScheduleWithBackground(studySchedule).catch(() => {});
       }
     };
+    const onPageHide = () => {
+      syncScheduleWithBackground(studySchedule).catch(() => {});
+    };
+
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', checkSchedule);
+    window.addEventListener('pagehide', onPageHide);
 
     return () => {
-      clearInterval(timer);
+      stopWorker();
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', checkSchedule);
+      window.removeEventListener('pagehide', onPageHide);
     };
-  }, [studySchedule.enabled, checkSchedule]);
+  }, [studySchedule, checkSchedule]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
