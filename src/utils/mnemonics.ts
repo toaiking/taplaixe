@@ -38,9 +38,15 @@ export function buildHighlightRegex(extraKeywords: string[] = []): RegExp {
   return new RegExp(`(${escaped.join('|')})`, 'gi');
 }
 
-export function getQuestionExplanation(q: Question): { tip: string; rule: string } {
+export function getQuestionExplanation(q: Question): {
+  quickTip: string;
+  legalBasis: string;
+} {
   if (q.explanation && q.explanation.trim()) {
-    return { tip: q.explanation, rule: 'Giải thích chuẩn' };
+    return {
+      quickTip: 'Ghi nhớ quy tắc chuẩn của Cục CSGT 2025.',
+      legalBasis: q.explanation,
+    };
   }
 
   const text = q.question.toLowerCase();
@@ -50,90 +56,103 @@ export function getQuestionExplanation(q: Question): { tip: string; rule: string
   if (q.isCritical) {
     if (ansLower.includes('không được') || ansLower.includes('bị nghiêm cấm')) {
       return {
-        rule: 'Điểm liệt — An toàn tuyệt đối',
-        tip: 'Câu điểm liệt về hành vi nguy hiểm: ưu tiên chọn phương án có cụm từ "Không được..." hoặc "Bị nghiêm cấm". Chỉ cần sai 1 câu điểm liệt sẽ trượt toàn bài thi.',
+        quickTip: 'Thấy cụm từ "Bị nghiêm cấm" hoặc "Không được..." → Chọn ngay!',
+        legalBasis:
+          'Câu điểm liệt về hành vi bị nghiêm cấm. Sai 1 câu điểm liệt sẽ bị đánh trượt toàn bộ bài thi.',
       };
     }
     if (text.includes('rào chắn') || text.includes('đường sắt')) {
       return {
-        rule: 'Điểm liệt — Giao cắt đường sắt',
-        tip: 'Khi có rào chắn dịch chuyển hoặc chuông/đèn báo hiệu đường sắt: bắt buộc dừng lại trước rào chắn một khoảng cách an toàn.',
+        quickTip: 'Gặp rào chắn / đường sắt → Dừng lại trước rào chắn khoảng cách an toàn.',
+        legalBasis:
+          'Luật TTATGTĐB quy định người tham gia giao thông phải dừng lại nhường đường tuyệt đối cho phương tiện đường sắt.',
       };
     }
     return {
-      rule: 'Điểm liệt — Quy tắc cốt lõi',
-      tip: 'Luôn ưu tiên phương án bảo đảm an toàn cao nhất: giảm tốc độ, nhường đường, dừng lại quan sát hoặc tuân thủ tuyệt đối hiệu lệnh.',
+      quickTip: 'Ưu tiên tuyệt đối phương án giảm tốc độ, nhường đường hoặc dừng quan sát.',
+      legalBasis:
+        'Đây là câu hỏi điểm liệt kiểm tra ý thức an toàn tối thiểu khi tham gia giao thông.',
     };
   }
 
   if (q.chapter === 6) {
     return {
-      rule: 'Mẹo giải sa hình 5 bước',
-      tip: 'Áp dụng thứ tự: 1. Nhất chớm (xe vào giao lộ trước) → 2. Nhì ưu (Hỏa - Sự - An - Thương) → 3. Tam đường (biển đường ưu tiên) → 4. Tứ hướng (bên phải không vướng) → 5. Ngũ hành (rẽ phải → đi thẳng → rẽ trái).',
+      quickTip: 'Nhất chớm → Nhì ưu (Hỏa-Sự-An-Thương) → Tam đường → Tứ hướng → Ngũ hành.',
+      legalBasis:
+        'Áp dụng đúng 5 bước giải sa hình: xe vào giao lộ trước, xe ưu tiên, đường ưu tiên, bên phải không vướng, rẽ phải → đi thẳng → rẽ trái.',
     };
   }
 
   if (q.chapter === 5) {
     if (text.includes('cấm')) {
       return {
-        rule: 'Nhóm biển báo cấm (Viền đỏ, nền trắng)',
-        tip: 'Biển cấm có hiệu lực từ vị trí đặt biển trở đi. Lưu ý quy tắc: Cấm xe nhỏ (ô tô con) thì cấm luôn xe lớn (tải, khách); cấm rẽ trái vẫn được quay đầu (trừ biển cấm quay đầu riêng).',
+        quickTip: 'Cấm xe nhỏ thì cấm luôn xe lớn; cấm rẽ trái VẪN ĐƯỢC quay đầu (trừ biển cấm riêng).',
+        legalBasis:
+          'Biển báo cấm (hình tròn viền đỏ) có hiệu lực từ vị trí đặt biển trở đi trên làn đường hoặc đoạn đường quy định.',
       };
     }
     if (text.includes('nguy hiểm') || text.includes('giao nhau')) {
       return {
-        rule: 'Nhóm biển báo nguy hiểm (Tam giác vàng, viền đỏ)',
-        tip: 'Biển tam giác vàng cảnh báo nguy hiểm phía trước. Đặc biệt chú ý phân biệt "Giao nhau với đường không ưu tiên" (nét dày dọc) và "Giao nhau với đường ưu tiên" (tam giác lộn ngược).',
+        quickTip: 'Tam giác vàng nét dọc dày = mình trên đường ưu tiên; tam giác lộn ngược = nhường đường.',
+        legalBasis:
+          'Biển báo nguy hiểm (tam giác vàng viền đỏ) cảnh báo trước các tình huống mất an toàn để người lái chủ động giảm tốc.',
       };
     }
     if (text.includes('hiệu lệnh') || text.includes('bắt buộc')) {
       return {
-        rule: 'Nhóm biển hiệu lệnh (Hình tròn xanh lam)',
-        tip: 'Biển tròn nền xanh lam là biển hiệu lệnh bắt buộc người tham gia giao thông phải thi hành theo hướng mũi tên hoặc tốc độ tối thiểu ghi trên biển.',
+        quickTip: 'Biển tròn nền xanh lam = Bắt buộc phải thi hành theo mũi tên hoặc trị số.',
+        legalBasis:
+          'Nhóm biển hiệu lệnh quy định hướng đi bắt buộc, làn đường dành riêng hoặc tốc độ tối thiểu cho phép.',
       };
     }
     return {
-      rule: 'Báo hiệu đường bộ',
-      tip: 'Quan sát kỹ hình dạng biển (Tròn đỏ = Cấm, Tam giác vàng = Nguy hiểm, Tròn xanh = Hiệu lệnh, Vuông/Chữ nhật xanh = Chỉ dẫn) và các biển phụ bên dưới.',
+      quickTip: 'Tròn đỏ = Cấm • Tam giác vàng = Nguy hiểm • Tròn xanh = Hiệu lệnh • Vuông xanh = Chỉ dẫn.',
+      legalBasis:
+        'Quan sát kỹ hình dạng, màu sắc biển chính và ký hiệu phạm vi/hướng tác dụng trên biển phụ bên dưới.',
     };
   }
 
   if (q.chapter === 3 || q.chapter === 4) {
     if (text.includes('bảng đồng hồ') || text.includes('ký hiệu')) {
       return {
-        rule: 'Nhận diện đèn cảnh báo Taplo',
-        tip: 'Đèn đỏ báo nguy hiểm/cần dừng ngay (phanh tay, thiếu dầu phanh, cửa mở, nhiệt độ nước làm mát cao, ắc quy); đèn vàng báo cần kiểm tra (Check Engine, ABS, áp suất lốp).',
+        quickTip: 'Đèn ĐỎ = Nguy hiểm dừng ngay (phanh, dầu, nhiệt, ắc quy) • Đèn VÀNG = Kiểm tra (ABS, động cơ, lốp).',
+        legalBasis:
+          'Hệ thống cảnh báo trên bảng taplo giúp người lái nhận biết sớm sự cố kỹ thuật để xử lý an toàn.',
       };
     }
     return {
-      rule: 'Kỹ thuật & Cấu tạo ô tô',
-      tip: 'Khi xuống dốc dài: về số thấp, kết hợp phanh động cơ; khi qua đường ngập/trơn trượt: giữ đều ga, không đánh lái ngoặt, không rà phanh liên tục.',
+      quickTip: 'Xuống dốc dài về số thấp; qua đường ngập/trơn giữ đều ga, không đánh lái ngoặt.',
+      legalBasis:
+        'Kỹ thuật lái xe an toàn kết hợp phanh động cơ và kiểm soát lực kéo giúp xe ổn định trên địa hình phức tạp.',
     };
   }
 
   if (text.includes('tốc độ')) {
     return {
-      rule: 'Mẹo nhớ Tốc độ tối đa',
-      tip: 'Trong khu đông dân cư: Đường đôi = 60 km/h, Đường 2 chiều = 50 km/h. Ngoài khu đông dân cư: xe con/xe ≤ 3.5 tấn được đi 90 km/h (đường đôi) hoặc 80 km/h (đường 2 chiều).',
+      quickTip: 'Trong khu đông dân cư: Đường đôi 60 km/h, Đường 2 chiều 50 km/h.',
+      legalBasis:
+        'Ngoài khu đông dân cư, tốc độ tối đa giảm dần theo tải trọng xe: 90/80 → 80/70 → 70/60 → 60/50 km/h.',
     };
   }
 
   if (text.includes('khoảng cách')) {
     return {
-      rule: 'Mẹo nhớ Khoảng cách an toàn',
-      tip: 'Lấy vận tốc lớn nhất trừ 30 để ước lượng nhanh: 60 km/h → 35m; 60–80 km/h → 55m; 80–100 km/h → 70m; 100–120 km/h → 100m.',
+      quickTip: '60 km/h → 35m • 80 km/h → 55m • 100 km/h → 70m • 120 km/h → 100m.',
+      legalBasis:
+        'Khoảng cách an toàn tối thiểu giữa hai xe được quy định tương ứng theo dải vận tốc lưu hành thực tế.',
     };
   }
 
   if (ansLower.includes('cả hai') || ansLower.includes('cả ba')) {
     return {
-      rule: 'Tổng hợp đầy đủ ý đúng',
-      tip: `Đáp án đúng là "${ans}" vì các phương án còn lại đều nêu đúng các điều kiện an toàn hoặc quy định pháp luật liên quan.`,
+      quickTip: 'Các ý trên đều đúng và bổ sung cho nhau → Chọn phương án tổng hợp.',
+      legalBasis: `Đáp án "${ans}" bao gồm đầy đủ các điều kiện pháp lý và an toàn giao thông được nêu.`,
     };
   }
 
   return {
-    rule: 'Ghi nhớ từ khóa trọng tâm',
-    tip: `Tập trung vào cụm từ khóa quyết định trong đáp án đúng: "${ans.slice(0, 95)}${ans.length > 95 ? '...' : ''}".`,
+    quickTip: `Chốt nhanh từ khóa: "${ans.slice(0, 80)}${ans.length > 80 ? '...' : ''}"`,
+    legalBasis:
+      'Tuân thủ đúng quy tắc nhường đường, bảo đảm an toàn và chấp hành báo hiệu đường bộ.',
   };
 }

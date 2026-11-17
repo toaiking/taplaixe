@@ -29,7 +29,7 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
           return (
             <mark
               key={idx}
-              className="rounded bg-amber-200/80 px-1 py-0.5 font-semibold text-slate-900 dark:bg-amber-400/30 dark:text-amber-100"
+              className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800 dark:bg-amber-400/25 dark:text-amber-200"
             >
               {part}
             </mark>
