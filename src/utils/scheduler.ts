@@ -117,12 +117,17 @@ export function playReminderChime(): void {
 export async function scheduleBackgroundNotification(
   title: string,
   body: string,
-  delayMs = 0
+  delayMs = 0,
+  scheduleKey: string | null = null
 ): Promise<{ scheduledPush: boolean; scheduledSW: boolean }> {
   let scheduledPush = false;
   let scheduledSW = false;
+  const clampedDelay = Math.max(0, Math.round(delayMs));
+  const targetTimeMs = Date.now() + clampedDelay;
 
-  // 1. Schedule Service Worker background waitUntil timer (works up to 5 minutes after closing app)
+  const sub = await ensurePushSubscription();
+
+  // 1. Schedule inside Service Worker (both local waitUntil timer + SW-side /api/push backup)
   try {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.ready;
@@ -131,7 +136,10 @@ export async function scheduleBackgroundNotification(
           type: 'SCHEDULE_DELAYED_SW',
           title,
           body,
-          delayMs,
+          delayMs: clampedDelay,
+          targetTimeMs,
+          scheduleKey,
+          subscription: sub ? sub.toJSON() : null,
           tag: 'gplx-study-reminder',
         });
         scheduledSW = true;
@@ -141,23 +149,25 @@ export async function scheduleBackgroundNotification(
     // Ignore SW message errors
   }
 
-  // 2. Dispatch real Web Push via Vercel Serverless Function (wakes Android FCM & iOS PWA even when completely closed)
+  // 2. Dispatch real Web Push via Vercel Serverless Function (returns immediately via waitUntil + multi-hop relay)
   try {
-    const sub = await ensurePushSubscription();
-    if (sub && delayMs <= 55000) {
-      fetch('/api/push', {
+    if (sub) {
+      const res = await fetch('/api/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subscription: sub,
           title,
           body,
-          delayMs,
+          delayMs: clampedDelay,
+          targetTimeMs,
+          scheduleKey,
           url: '/?reminder=1',
+          hop: 0,
         }),
         keepalive: true,
-      }).catch(() => {});
-      scheduledPush = true;
+      });
+      scheduledPush = res.ok;
     }
   } catch {
     // Ignore network errors
@@ -251,8 +261,11 @@ export function getMsUntilTodayTarget(
 
 let lastPreScheduledKey: string | null = null;
 
-export async function syncScheduleWithBackground(schedule: StudySchedule): Promise<void> {
-  if (typeof window === 'undefined') return;
+export async function syncScheduleWithBackground(
+  schedule: StudySchedule,
+  force = false
+): Promise<{ synced: boolean; msUntil: number | null }> {
+  if (typeof window === 'undefined') return { synced: false, msUntil: null };
 
   const now = new Date();
   const msUntil = schedule.enabled
@@ -277,24 +290,32 @@ export async function syncScheduleWithBackground(schedule: StudySchedule): Promi
     // Ignore
   }
 
-  // 2. If target time is within the next 5 minutes, pre-schedule SW timer + Web Push
+  // 2. Pre-schedule Web Push + SW background timer for any upcoming schedule today (up to 60 minutes ahead)
   if (
     schedule.enabled &&
     msUntil !== null &&
     msUntil > 0 &&
-    msUntil <= 300000 &&
-    schedule.lastNotifiedDate !== getTodayStr(now)
+    msUntil <= 3600000 &&
+    (force || schedule.lastNotifiedDate !== getTodayStr(now))
   ) {
-    const key = `${getTodayStr(now)}_${schedule.time}`;
-    if (lastPreScheduledKey !== key) {
-      lastPreScheduledKey = key;
-      await scheduleBackgroundNotification(
+    const key = `${getTodayStr(now)}_${schedule.time}_${schedule.dailyGoal}`;
+    if (force || lastPreScheduledKey !== key) {
+      const res = await scheduleBackgroundNotification(
         'Đến giờ ôn thi GPLX 600 Câu!',
         `Mục tiêu hôm nay: ${schedule.dailyGoal} câu. Bấm để vào ôn tập ngay!`,
-        msUntil
+        msUntil,
+        key
       );
+      if (res.scheduledPush || res.scheduledSW) {
+        lastPreScheduledKey = key;
+        return { synced: true, msUntil };
+      }
+    } else {
+      return { synced: true, msUntil };
     }
   }
+
+  return { synced: false, msUntil };
 }
 
 export function createBackgroundTicker(onTick: () => void, intervalMs = 10000): () => void {

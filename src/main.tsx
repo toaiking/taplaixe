@@ -11,7 +11,7 @@ if ('serviceWorker' in navigator) {
         .then((keys) =>
           Promise.all(
             keys
-              .filter((k) => k !== 'gplx-600-v4')
+              .filter((k) => k !== 'gplx-600-v5')
               .map((k) => caches.delete(k))
           )
         )
@@ -19,7 +19,7 @@ if ('serviceWorker' in navigator) {
     }
 
     navigator.serviceWorker
-      .register('/sw.js?v=4', { updateViaCache: 'none' })
+      .register('/sw.js?v=5', { updateViaCache: 'none' })
       .then((reg) => {
         reg.update().catch(() => {});
       })

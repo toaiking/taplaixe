@@ -40,6 +40,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
     msg: string;
   } | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const iosNeedsInstall = isIOSNonStandalone();
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
       setPerm(getNotificationPermission());
       setTestStatus(null);
       setCountdown(null);
+      setIsSaving(false);
     }
   }, [open]);
 
@@ -69,7 +71,7 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
       lastNotifiedDate: null,
     };
     updateStudySchedule({ days: updated.days, lastNotifiedDate: null });
-    syncScheduleWithBackground(updated);
+    syncScheduleWithBackground(updated, true);
   };
 
   const handleEnableToggle = async () => {
@@ -84,16 +86,25 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
       lastNotifiedDate: null,
     };
     updateStudySchedule({ enabled: nextEnabled, lastNotifiedDate: null });
-    syncScheduleWithBackground(updated);
+    await syncScheduleWithBackground(updated, true);
   };
 
   const handleSaveAndClose = async () => {
-    if (studySchedule.enabled && perm !== 'granted') {
+    setIsSaving(true);
+    try {
       const p = await requestNotificationPermission();
       setPerm(p);
+      const updated = {
+        ...studySchedule,
+        enabled: true,
+        lastNotifiedDate: null,
+      };
+      updateStudySchedule({ enabled: true, lastNotifiedDate: null });
+      await syncScheduleWithBackground(updated, true);
+    } finally {
+      setIsSaving(false);
+      onClose();
     }
-    await syncScheduleWithBackground(studySchedule);
-    onClose();
   };
 
   const handleTestNotification = async () => {
@@ -150,7 +161,8 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
     await scheduleBackgroundNotification(
       '🔔 Thông báo ngầm GPLX 600 Câu!',
       `Hoạt động tốt cả khi đóng App! Mục tiêu: ${studySchedule.dailyGoal} câu/ngày.`,
-      5000
+      5000,
+      `test5s_${Date.now()}`
     );
 
     setTestStatus({
@@ -259,10 +271,6 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     value={studySchedule.time}
                     onChange={async (e) => {
                       const nextTime = e.target.value;
-                      if (perm !== 'granted') {
-                        const p = await requestNotificationPermission();
-                        setPerm(p);
-                      }
                       const updated = {
                         ...studySchedule,
                         time: nextTime,
@@ -274,7 +282,15 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                         lastNotifiedDate: null,
                         enabled: true,
                       });
-                      syncScheduleWithBackground(updated);
+                      const p = await requestNotificationPermission();
+                      setPerm(p);
+                      const res = await syncScheduleWithBackground(updated, true);
+                      if (res.synced) {
+                        setTestStatus({
+                          ok: true,
+                          msg: `Đã đồng bộ lịch nhắc lúc ${nextTime} lên máy chủ đẩy! Bạn có thể đóng ứng dụng.`,
+                        });
+                      }
                     }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
@@ -288,8 +304,13 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
                     value={studySchedule.dailyGoal}
                     onChange={(e) => {
                       const goal = Number(e.target.value);
-                      updateStudySchedule({ dailyGoal: goal });
-                      syncScheduleWithBackground({ ...studySchedule, dailyGoal: goal });
+                      const updated = {
+                        ...studySchedule,
+                        dailyGoal: goal,
+                        lastNotifiedDate: null,
+                      };
+                      updateStudySchedule({ dailyGoal: goal, lastNotifiedDate: null });
+                      syncScheduleWithBackground(updated, true);
                     }}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
@@ -383,10 +404,11 @@ export const StudyScheduleModal: React.FC<StudyScheduleModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveAndClose}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600"
+                disabled={isSaving}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-70 dark:bg-indigo-600"
               >
                 <Check className="h-3.5 w-3.5" />
-                Lưu lịch ôn tập
+                {isSaving ? 'Đang đồng bộ lịch ngầm...' : 'Lưu lịch ôn tập'}
               </button>
             </div>
           </motion.div>
