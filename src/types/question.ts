@@ -19,7 +19,7 @@ export interface QuestionProgress {
   lastReviewed: number;
 }
 
-export type ScreenId = 'dashboard' | 'practice' | 'exam' | 'handbook';
+export type ScreenId = 'dashboard' | 'practice' | 'exam' | 'simulation' | 'handbook';
 
 export type PracticeSourceMode =
   | 'all'

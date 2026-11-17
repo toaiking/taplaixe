@@ -7,6 +7,7 @@ import { ExamHubView } from './components/ExamHubView';
 import { ImageLightbox } from './components/ImageLightbox';
 import { Navbar } from './components/Navbar';
 import { QuizWorkspace } from './components/QuizWorkspace';
+import { SimulationView } from './components/SimulationView';
 import { UpdateModal } from './components/UpdateModal';
 import { useAppStore } from './store/useAppStore';
 import { Question } from './types/question';
@@ -241,6 +242,7 @@ export function App() {
           />
         )}
         {activeScreen === 'exam' && <ExamHubView questions={questions} />}
+        {activeScreen === 'simulation' && <SimulationView />}
         {activeScreen === 'handbook' && (
           <CheatSheetView
             questions={questions}

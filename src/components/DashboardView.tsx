@@ -4,6 +4,7 @@ import {
   Bell,
   BookOpen,
   Compass,
+  Film,
   Flame,
   Gauge,
   HeartHandshake,
@@ -267,6 +268,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
             {studySchedule.enabled ? 'Chỉnh lịch' : 'Tạo lịch ôn tập'}
           </button>
         </div>
+      </div>
+
+      {/* 120 Traffic Simulation 2026 Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-200/80 bg-indigo-50/50 px-6 py-4 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <Film className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                120 Tình Huống Mô Phỏng Giao Thông 2026
+              </span>
+              <span className="rounded-md bg-indigo-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-white">
+                TT 17/2026/TT-BXD
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              120 video tình huống thực tế + 480 câu trắc nghiệm nhận diện nguy cơ (4 ý × 0,25đ = 1,0đ/câu) &amp; 18 bộ đề chuẩn.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setActiveScreen('simulation')}
+          className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+        >
+          Vào ôn 120 tình huống →
+        </button>
       </div>
 
       {/* 6 Rich Chapter Cards */}

@@ -8,6 +8,7 @@ const NAV_ITEMS: { id: ScreenId; label: string }[] = [
   { id: 'dashboard', label: 'Trang chủ' },
   { id: 'practice', label: 'Ôn tập' },
   { id: 'exam', label: 'Thi thử' },
+  { id: 'simulation', label: '120 Mô phỏng' },
   { id: 'handbook', label: 'Sổ tay' },
 ];
 
