@@ -32,7 +32,7 @@ export function App() {
   }, [darkMode]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
       {activeScreen === 'practice' ? (
         <QuizWorkspace
           mode="practice"
