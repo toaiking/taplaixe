@@ -179,10 +179,10 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Sổ Tay Kiến Thức &amp; Tra Cứu 2025
+            Sổ Tay Kiến Thức &amp; Tra Cứu 2026
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Ảnh biển báo thật chuẩn Cục CSGT 2025, taplo, hiệu lệnh CSGT, tốc độ &amp; mẹo giải nhanh.
+            Biển báo chuẩn Cục CSGT, định mức đào tạo Thông tư 17/2026/TT-BXD, taplo, tốc độ &amp; mẹo giải nhanh.
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
             { id: 'signs', label: 'Biển báo dễ lừa' },
             { id: 'speed', label: 'Tốc độ & Khoảng cách' },
             { id: 'taplo_csgt', label: 'Taplo & CSGT' },
-            { id: 'licenses', label: 'GPLX & Mẹo 2025' },
+            { id: 'licenses', label: 'GPLX & Mẹo 2026' },
             { id: 'search', label: 'Tra cứu 600 câu' },
           ]}
         />
@@ -465,6 +465,95 @@ export const CheatSheetView: React.FC<CheatSheetViewProps> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Thông tư 17/2026/TT-BXD Training & Graduation Requirements */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-block rounded-md bg-slate-900 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white dark:bg-indigo-600">
+                Thông tư 17/2026/TT-BXD
+              </span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Ban hành 29/04/2026 • Hiệu lực từ 01/07/2026 (Sửa đổi TT 14/2025/TT-BXD)
+              </span>
+            </div>
+            <h3 className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100">
+              Định mức đào tạo lái xe &amp; Điều kiện xét hoàn thành khóa học (Thông tư 17/2026/TT-BXD)
+            </h3>
+
+            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+                    <th className="p-3 font-bold">Hạng đào tạo</th>
+                    <th className="p-3 font-bold">Giờ lý thuyết &amp; Mô phỏng</th>
+                    <th className="p-3 font-bold">Giờ thực hành</th>
+                    <th className="p-3 font-bold">Quãng đường &amp; Điểm mới</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng A1</td>
+                    <td className="p-3">9 giờ (Luật GT: 7h • Kỹ thuật lái: 2h)</td>
+                    <td className="p-3 font-mono font-semibold">3 giờ</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">
+                      Tổng <strong>12 giờ</strong> (giảm 1h lý thuyết, tăng 1h thực hành).
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng A</td>
+                    <td className="p-3">20 giờ (Luật GT: 16h • Kỹ thuật lái: 4h)</td>
+                    <td className="p-3 font-mono font-semibold">12 giờ</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">
+                      Tổng <strong>32 giờ</strong> đào tạo lý thuyết &amp; thực hành.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng B (Tự động)</td>
+                    <td className="p-3">Có 4h PCCC &amp; CNCH + 4h Mô phỏng (120 TH)</td>
+                    <td className="p-3 font-mono font-semibold">60 giờ</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">
+                      Tối thiểu <strong>950 km</strong> (giảm 7h và 50 km thực hành sân tập).
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">Hạng B (Số sàn) &amp; C1</td>
+                    <td className="p-3">Có 4h PCCC &amp; CNCH + 4h Mô phỏng (120 TH)</td>
+                    <td className="p-3 font-mono font-semibold">76 giờ</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">
+                      Tối thiểu <strong>1.050 km</strong> (giảm 7h và 50 km sân tập, tập trung đường trường).
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                <div className="font-bold text-slate-900 dark:text-slate-100">
+                  1. Điều kiện xét tốt nghiệp khóa học
+                </div>
+                <p className="mt-1 leading-relaxed text-slate-600 dark:text-slate-400">
+                  Tham dự tối thiểu <strong>70% giờ lý thuyết</strong>; đủ thời gian &amp; đạt <strong>≥ 50% km trên sân tập</strong>; đủ tổng km &amp; đạt <strong>≥ 50% thời gian trên đường giao thông (DAT)</strong>.
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                <div className="font-bold text-slate-900 dark:text-slate-100">
+                  2. Hồ sơ &amp; thời gian nâng hạng
+                </div>
+                <p className="mt-1 leading-relaxed text-slate-600 dark:text-slate-400">
+                  Nâng hạng <strong>D1, D2, D</strong> chấp nhận <em>xác nhận hoàn thành chương trình THCS trở lên</em> hoặc bằng THCS trở lên. Nâng D1/D2 lên CE cần <strong>≥ 03 năm</strong> lái xe an toàn.
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                <div className="font-bold text-slate-900 dark:text-slate-100">
+                  3. Chứng chỉ điện tử &amp; Mô phỏng
+                </div>
+                <p className="mt-1 leading-relaxed text-slate-600 dark:text-slate-400">
+                  Cấp chứng chỉ bản giấy hoặc <strong>bản điện tử trong 05 ngày làm việc</strong>. Môn mô phỏng (4h) kiểm tra kết thúc khóa học chấm thang điểm 10 (lấy 1 chữ số thập phân).
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* 2026 Regulation Updates Banner */}

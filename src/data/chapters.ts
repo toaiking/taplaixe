@@ -19,9 +19,9 @@ export const CHAPTERS: ChapterMeta[] = [
   {
     id: 2,
     title: 'Chương 2: Văn hóa giao thông, PCCC & Cứu hộ',
-    shortTitle: 'Văn hóa & Đạo đức',
+    shortTitle: 'Văn hóa & PCCC',
     range: [181, 205],
-    description: 'Đạo đức người lái xe, trách nhiệm khi xảy ra tai nạn, kỹ năng PCCC.',
+    description: 'Đạo đức người lái xe, kỹ năng PCCC & cứu nạn cứu hộ (4h bắt buộc theo TT 17/2026/TT-BXD).',
   },
   {
     id: 3,
