@@ -2,59 +2,50 @@ import React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ScreenId } from '../types/question';
+import { InstallAppButton } from './InstallAppButton';
+
+const NAV_ITEMS: { id: ScreenId; label: string }[] = [
+  { id: 'dashboard', label: 'Trang chủ' },
+  { id: 'practice', label: 'Ôn tập' },
+  { id: 'exam', label: 'Thi thử' },
+  { id: 'handbook', label: 'Sổ tay' },
+];
 
 export const Navbar: React.FC = () => {
-  const {
-    activeScreen,
-    setActiveScreen,
-    setCheatSheetOpen,
-    darkMode,
-    toggleDarkMode,
-  } = useAppStore();
-
-  const navItems: { id: ScreenId | 'cheatsheet'; label: string }[] = [
-    { id: 'dashboard', label: 'Trang chủ' },
-    { id: 'practice', label: 'Ôn tập' },
-    { id: 'exam', label: 'Thi thử' },
-    { id: 'cheatsheet', label: 'Sổ tay' },
-  ];
-
-  const handleNav = (id: ScreenId | 'cheatsheet') => {
-    if (id === 'cheatsheet') {
-      setCheatSheetOpen(true);
-    } else {
-      setActiveScreen(id);
-    }
-  };
+  const { activeScreen, setActiveScreen, darkMode, toggleDarkMode } =
+    useAppStore();
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur-md dark:border-zinc-800/60 dark:bg-zinc-950/90">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          {/* Left: Pure Typography Brand */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          {/* Left: Brand */}
           <button
+            type="button"
             onClick={() => setActiveScreen('dashboard')}
             className="flex items-center gap-2 text-left transition-opacity hover:opacity-80"
           >
-            <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
               GPLX 600
             </span>
-            <span className="font-mono text-xs text-zinc-400 dark:text-zinc-600">/</span>
-            <span className="font-mono text-xs text-zinc-500">2025</span>
+            <span className="rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+              2025
+            </span>
           </button>
 
-          {/* Center: 4 Clean Text Links */}
-          <nav className="hidden items-center gap-6 md:flex">
-            {navItems.map((item) => {
+          {/* Center: 4 Official Tabs with fixed-height bottom underline (zero layout shift) */}
+          <nav className="hidden h-16 items-stretch gap-7 md:flex">
+            {NAV_ITEMS.map((item) => {
               const active = activeScreen === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleNav(item.id)}
-                  className={`text-sm transition-colors ${
+                  type="button"
+                  onClick={() => setActiveScreen(item.id)}
+                  className={`inline-flex h-full items-center border-b-2 text-sm transition-colors ${
                     active
-                      ? 'font-medium text-zinc-900 dark:text-zinc-100'
-                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'
+                      ? 'border-slate-900 font-semibold text-slate-900 dark:border-white dark:text-white'
+                      : 'border-transparent font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
                   }`}
                 >
                   {item.label}
@@ -63,41 +54,48 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right: Single Theme Toggle Button */}
-          <button
-            onClick={toggleDarkMode}
-            aria-label="Chuyển giao diện Sáng / Tối"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-200/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          >
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          {/* Right: Install + Theme Toggle */}
+          <div className="flex items-center gap-2">
+            <InstallAppButton />
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              aria-label="Chuyển giao diện Sáng / Tối"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Clean Monochrome Mobile Bottom Bar */}
-      <nav
-        aria-label="Điều hướng chính"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-zinc-50/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden dark:border-zinc-800/80 dark:bg-zinc-950/95"
-      >
-        <div className="mx-auto flex max-w-md items-center justify-around">
-          {navItems.map((item) => {
-            const active = activeScreen === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNav(item.id)}
-                className={`py-1.5 text-xs transition-colors ${
-                  active
-                    ? 'font-semibold text-zinc-900 dark:text-zinc-100'
-                    : 'font-medium text-zinc-500 dark:text-zinc-500'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Mobile Bottom Navigation Bar (only on Dashboard/ExamHub/Handbook; QuizWorkspace has its own Floating Thumb-Bar) */}
+      {activeScreen !== 'practice' && (
+        <nav
+          aria-label="Điều hướng chính"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95"
+        >
+          <div className="mx-auto flex max-w-md items-center justify-around">
+            {NAV_ITEMS.map((item) => {
+              const active = activeScreen === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveScreen(item.id)}
+                  className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                    active
+                      ? 'font-semibold text-slate-900 dark:text-white'
+                      : 'font-medium text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </>
   );
 };

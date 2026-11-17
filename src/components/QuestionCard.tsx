@@ -47,7 +47,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* Minimalist Eyebrow Row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="text-xs font-bold tracking-wider text-blue-600 uppercase dark:text-blue-400">
+          <span className="text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400">
             Câu {question.id}
           </span>
           {question.isCritical && (

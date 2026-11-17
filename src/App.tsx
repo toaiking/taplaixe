@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import questionsData from './data/questions.json';
-import { CheatSheetModal } from './components/CheatSheetModal';
+import { CheatSheetView } from './components/CheatSheetView';
 import { DashboardView } from './components/DashboardView';
-import { ExamLobbyView } from './components/ExamLobbyView';
+import { ExamHubView } from './components/ExamHubView';
 import { ImageLightbox } from './components/ImageLightbox';
 import { Navbar } from './components/Navbar';
 import { QuizWorkspace } from './components/QuizWorkspace';
@@ -12,14 +12,7 @@ import { Question } from './types/question';
 const questions = questionsData as Question[];
 
 export function App() {
-  const {
-    activeScreen,
-    setActiveScreen,
-    darkMode,
-    cheatSheetOpen,
-    setCheatSheetOpen,
-  } = useAppStore();
-
+  const { activeScreen, setActiveScreen, darkMode } = useAppStore();
   const [globalLightboxSrc, setGlobalLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,30 +25,27 @@ export function App() {
   }, [darkMode]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
-      {activeScreen === 'practice' ? (
-        <QuizWorkspace
-          mode="practice"
-          questions={questions}
-          title="Ôn Tập Lý Thuyết 600 Câu"
-          onExit={() => setActiveScreen('dashboard')}
-        />
-      ) : (
-        <>
-          <Navbar />
-          <main className="pb-24 md:pb-10">
-            {activeScreen === 'dashboard' && <DashboardView questions={questions} />}
-            {activeScreen === 'exam' && <ExamLobbyView questions={questions} />}
-          </main>
-        </>
-      )}
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+      <Navbar />
 
-      <CheatSheetModal
-        open={cheatSheetOpen}
-        questions={questions}
-        onClose={() => setCheatSheetOpen(false)}
-        onZoomImage={(src) => setGlobalLightboxSrc(src)}
-      />
+      <main className="flex flex-1 flex-col pb-20 md:pb-8">
+        {activeScreen === 'dashboard' && <DashboardView questions={questions} />}
+        {activeScreen === 'practice' && (
+          <QuizWorkspace
+            mode="practice"
+            questions={questions}
+            title="Ôn Tập Lý Thuyết 600 Câu"
+            onExit={() => setActiveScreen('dashboard')}
+          />
+        )}
+        {activeScreen === 'exam' && <ExamHubView questions={questions} />}
+        {activeScreen === 'handbook' && (
+          <CheatSheetView
+            questions={questions}
+            onZoomImage={(src) => setGlobalLightboxSrc(src)}
+          />
+        )}
+      </main>
 
       <ImageLightbox
         src={globalLightboxSrc}

@@ -1,4 +1,15 @@
 import React, { useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  BookOpen,
+  Compass,
+  Flame,
+  Gauge,
+  HeartHandshake,
+  RotateCcw,
+  Signpost,
+  Wrench,
+} from 'lucide-react';
 import { CHAPTERS } from '../data/chapters';
 import { useAppStore } from '../store/useAppStore';
 import { Question } from '../types/question';
@@ -7,20 +18,25 @@ interface DashboardViewProps {
   questions: Question[];
 }
 
+const CHAPTER_ICONS: Record<number, React.ReactNode> = {
+  1: <BookOpen className="h-5 w-5" />,
+  2: <HeartHandshake className="h-5 w-5" />,
+  3: <Gauge className="h-5 w-5" />,
+  4: <Wrench className="h-5 w-5" />,
+  5: <Signpost className="h-5 w-5" />,
+  6: <Compass className="h-5 w-5" />,
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
-  const {
-    srs,
-    examHistory,
-    navigateToPractice,
-    setActiveScreen,
-    resetProgress,
-  } = useAppStore();
+  const { srs, navigateToPractice, setActiveScreen, resetProgress } =
+    useAppStore();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const stats = useMemo(() => {
     let mastered = 0;
     let learning = 0;
     let wrong = 0;
+    let unlearned = 0;
     let criticalMastered = 0;
 
     for (const q of questions) {
@@ -32,108 +48,187 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
         learning++;
       } else if (box === 'wrong') {
         wrong++;
+      } else {
+        unlearned++;
       }
     }
 
-    const readiness = Math.min(
-      100,
-      Math.round(
-        (mastered / questions.length) * 65 +
-          (criticalMastered / 60) * 25 +
-          (learning / questions.length) * 10
-      )
-    );
-
+    const total = questions.length || 1;
     return {
       mastered,
+      learning,
       wrong,
+      unlearned,
       criticalMastered,
-      readiness,
+      pMastered: (mastered / total) * 100,
+      pLearning: (learning / total) * 100,
+      pWrong: (wrong / total) * 100,
     };
   }, [questions, srs]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
-      {/* Khu vực 1: Minimal Hero Strip */}
-      <section className="flex flex-col justify-between gap-6 border-b border-zinc-200/80 pb-8 md:flex-row md:items-end dark:border-zinc-800/80">
-        <div>
-          <div className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-            TIẾN ĐỘ TỔNG QUAN
-          </div>
-          <div className="mt-1 flex flex-wrap items-baseline">
-            <span className="text-4xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-100">
-              {stats.mastered} / {questions.length}
-            </span>
-            <span className="ml-3 text-sm text-zinc-500 dark:text-zinc-400">
-              {stats.readiness}% sẵn sàng • {examHistory.length} đề đã thi
-            </span>
+    <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      {/* Top Bento Row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Col-span-8: Progress & Multi-Segment Bar */}
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-7 shadow-2xs lg:col-span-8 dark:border-slate-800 dark:bg-slate-900">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono text-4xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-slate-100">
+                  {stats.mastered} / {questions.length}
+                </span>
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  câu đã thuộc
+                </span>
+              </div>
+              <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                Hạng B • Chuẩn 2025
+              </span>
+            </div>
+
+            {/* Multi-Segment Progress Bar */}
+            <div className="my-5 flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${stats.pMastered}%` }}
+              />
+              <div
+                className="h-full bg-indigo-500 transition-all duration-300"
+                style={{ width: `${stats.pLearning}%` }}
+              />
+              <div
+                className="h-full bg-amber-500 transition-all duration-300"
+                style={{ width: `${stats.pWrong}%` }}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Đã thuộc ({stats.mastered})
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                Đang học ({stats.learning})
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                Cần ôn lại ({stats.wrong})
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                Chưa học ({stats.unlearned})
+              </span>
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             <button
+              type="button"
               onClick={() =>
                 navigateToPractice({ chapter: 'all', sourceMode: 'srs' })
               }
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+              className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-xs transition-all hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500"
             >
-              Bắt đầu học
+              Bắt đầu lộ trình học →
             </button>
             <button
+              type="button"
               onClick={() => setActiveScreen('exam')}
-              className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              Thi thử sát hạch
+              Thi thử đề ngẫu nhiên
             </button>
           </div>
         </div>
 
-        {/* 2 Stat Columns (No colored boxes) */}
-        <div className="flex items-center gap-10">
+        {/* Col-span-4: 2 Emergency Cards */}
+        <div className="space-y-4 lg:col-span-4">
           <button
+            type="button"
             onClick={() =>
               navigateToPractice({ chapter: 'all', sourceMode: 'critical' })
             }
-            className="group text-left"
+            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-rose-500 bg-white p-5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-rose-500 dark:bg-slate-900"
           >
-            <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-              <span>Điểm liệt</span>
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                <Flame className="h-4 w-4 text-rose-500" />
+                60 Câu Điểm Liệt
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Bắt buộc đúng 100% khi thi
+              </p>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 font-mono text-xl font-medium tabular-nums text-zinc-900 transition-colors group-hover:text-zinc-600 dark:text-zinc-200 dark:group-hover:text-white">
-              <span>{stats.criticalMastered} / 60</span>
-              <span className="text-sm text-zinc-400 transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
-            </div>
+            <span className="font-mono text-lg font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+              {stats.criticalMastered}/60
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() =>
               navigateToPractice({ chapter: 'all', sourceMode: 'wrong' })
             }
-            className="group text-left"
+            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 border-l-4 border-l-amber-500 bg-white p-5 text-left transition-all hover:shadow-md dark:border-slate-800 dark:border-l-amber-500 dark:bg-slate-900"
           >
-            <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <span>Câu làm sai</span>
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Ngân Hàng Câu Hay Sai
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Các câu cần xử lý ngay
+              </p>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 font-mono text-xl font-medium tabular-nums text-zinc-900 transition-colors group-hover:text-zinc-600 dark:text-zinc-200 dark:group-hover:text-white">
-              <span>{stats.wrong} câu</span>
-              <span className="text-sm text-zinc-400 transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
-            </div>
+            <span className="font-mono text-lg font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+              {stats.wrong}
+            </span>
           </button>
         </div>
-      </section>
+      </div>
 
-      {/* Khu vực 2: Hairline Border Grid (6 Chapters) */}
-      <section>
-        <h2 className="mb-4 font-mono text-xs uppercase tracking-wider text-zinc-500">
-          NỘI DUNG 6 CHƯƠNG
-        </h2>
+      {/* 6 Rich Chapter Cards */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            6 Chương Lý Thuyết Chuẩn 2025
+          </h2>
+          {!confirmReset ? (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Đặt lại tiến độ
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600 dark:text-slate-300">Xóa toàn bộ tiến độ?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  resetProgress();
+                  setConfirmReset(false);
+                }}
+                className="font-semibold text-rose-600 hover:underline"
+              >
+                Xác nhận
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="font-medium text-slate-500 hover:underline"
+              >
+                Hủy
+              </button>
+            </div>
+          )}
+        </div>
 
-        <div className="grid grid-cols-1 gap-[1px] overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-200/80 md:grid-cols-3 dark:border-zinc-800/60 dark:bg-zinc-800/60">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {CHAPTERS.map((chap) => {
             const chapQs = questions.filter((q) => q.chapter === chap.id);
             const total = chapQs.length || 1;
@@ -145,106 +240,54 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ questions }) => {
             return (
               <button
                 key={chap.id}
+                type="button"
                 onClick={() =>
                   navigateToPractice({ chapter: chap.id, sourceMode: 'all' })
                 }
-                className="flex flex-col justify-between bg-white p-6 text-left transition-colors hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900/80"
+                className="group flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 text-left transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
               >
                 <div>
-                  <div className="flex items-center justify-between font-mono text-xs text-zinc-500">
-                    <span>CHƯƠNG {String(chap.id).padStart(2, '0')}</span>
-                    <span className="tabular-nums">
-                      {masteredCnt}/{chapQs.length}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/60 bg-slate-50 text-slate-700 transition-colors group-hover:bg-slate-900 group-hover:text-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:group-hover:bg-indigo-600">
+                        {CHAPTER_ICONS[chap.id]}
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        CHƯƠNG {String(chap.id).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <span className="rounded-md bg-slate-50 px-2.5 py-1 font-mono text-xs tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {masteredCnt} / {chapQs.length} câu
                     </span>
                   </div>
-                  <h3 className="mt-3 mb-1.5 text-base font-medium text-zinc-900 dark:text-zinc-100">
+
+                  <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-slate-100">
                     {chap.shortTitle}
                   </h3>
-                  <p className="line-clamp-1 text-xs text-zinc-500">
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     {chap.description}
                   </p>
                 </div>
 
-                <div className="mt-5 h-[2px] w-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
-                  <div
-                    className="h-full bg-zinc-900 transition-all duration-300 dark:bg-zinc-200"
-                    style={{ width: `${pct}%` }}
-                  />
+                <div className="mt-5">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between text-xs">
+                    <span className="font-mono text-slate-400 tabular-nums">{pct}%</span>
+                    <span className="font-medium text-indigo-600 opacity-0 transition-opacity group-hover:opacity-100 dark:text-indigo-400">
+                      Vào học →
+                    </span>
+                  </div>
                 </div>
               </button>
             );
           })}
         </div>
-      </section>
-
-      {/* Khu vực 3: Minimal Text Links */}
-      <section className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-xs text-zinc-500">
-        <span>Luyện theo nhóm:</span>
-        <button
-          onClick={() =>
-            navigateToPractice({ chapter: 'all', sourceMode: 'critical' })
-          }
-          className="underline-offset-4 hover:text-zinc-900 hover:underline dark:hover:text-zinc-200"
-        >
-          60 câu điểm liệt
-        </button>
-        <button
-          onClick={() =>
-            navigateToPractice({
-              chapter: 'all',
-              sourceMode: 'all',
-              onlyWithImage: true,
-            })
-          }
-          className="underline-offset-4 hover:text-zinc-900 hover:underline dark:hover:text-zinc-200"
-        >
-          318 câu có hình ảnh
-        </button>
-        <button
-          onClick={() =>
-            navigateToPractice({ chapter: 'all', sourceMode: 'speed_distance' })
-          }
-          className="underline-offset-4 hover:text-zinc-900 hover:underline dark:hover:text-zinc-200"
-        >
-          Tốc độ &amp; Khoảng cách
-        </button>
-        <button
-          onClick={() =>
-            navigateToPractice({ chapter: 5, sourceMode: 'all' })
-          }
-          className="underline-offset-4 hover:text-zinc-900 hover:underline dark:hover:text-zinc-200"
-        >
-          Biển báo &amp; Sa hình
-        </button>
-
-        {!confirmReset ? (
-          <button
-            onClick={() => setConfirmReset(true)}
-            className="underline-offset-4 hover:text-zinc-900 hover:underline dark:hover:text-zinc-200"
-          >
-            Đặt lại tiến độ
-          </button>
-        ) : (
-          <span className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-            <span>Xác nhận xóa?</span>
-            <button
-              onClick={() => {
-                resetProgress();
-                setConfirmReset(false);
-              }}
-              className="font-medium text-red-600 underline-offset-4 hover:underline dark:text-red-400"
-            >
-              Xóa
-            </button>
-            <button
-              onClick={() => setConfirmReset(false)}
-              className="underline-offset-4 hover:underline"
-            >
-              Hủy
-            </button>
-          </span>
-        )}
-      </section>
+      </div>
     </div>
   );
 };
